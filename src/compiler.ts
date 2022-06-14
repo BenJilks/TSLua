@@ -260,7 +260,8 @@ function compile_return(return_block: Return | undefined): Op[]
     for (const value of return_block.values)
         ops.push(...compile_expression(value))
 
-    ops.push({ code: OpCode.Return })
+    const return_count = return_block.values.length
+    ops.push({ code: OpCode.Return, arg: { data_type: DataType.Number, number: return_count } })
     return ops
 }
 

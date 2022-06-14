@@ -12,6 +12,13 @@ export function call(func: CompiledFunction,
                      args?: Variable[],
                      debug?: boolean): Variable[]
 {
+    if (func.parameters.length != (args?.length ?? 0))
+    {
+        console.log(`Error: Expected ${ func.parameters.length } ` + 
+                    `argument(s), got ${ args?.length ?? 0 } instead.`)
+        return [nil]
+    }
+
     const bytecode = func.ops
     globals = globals ?? new Map()
     args = args ?? []
@@ -43,10 +50,20 @@ export function call(func: CompiledFunction,
             case OpCode.LessThen: stack.push({ data_type: DataType.Boolean, boolean: (stack.pop()!.number ?? 0) < (stack.pop()!.number ?? 0) }); break
             case OpCode.GreaterThen: stack.push({ data_type: DataType.Boolean, boolean: (stack.pop()!.number ?? 0) > (stack.pop()!.number ?? 0) }); break
             case OpCode.IsNil: stack.push({ data_type: DataType.Boolean, boolean: stack.pop()!.data_type == DataType.Nil}); break
-            case OpCode.Return: return stack;
             case OpCode.Jump: ip += arg?.number!; break
             case OpCode.JumpIfNot: ip += stack.pop()?.boolean! ? arg?.number! : 0; break
             case OpCode.MakeLocal: func.locals.set(arg?.string!, nil); break
+
+            case OpCode.Return:
+            {
+                if (stack.length != arg?.number!)
+                {
+                    console.log(`Error: Expected to end with ${ arg?.number! } ` +
+                                `value(s) on the stack, got ${ stack.length } instead`)
+                    return [nil]
+                }
+                return stack
+            }
 
             case OpCode.StoreIndex:
             {
@@ -126,6 +143,11 @@ export function call(func: CompiledFunction,
             console.log('stack:', ...stack.map(std.to_string))
     }
 
+    if (stack.length != 0)
+    {
+        console.log(`Error: Expected to end with ${ 0 } ` +
+                    `values on the stack, got ${ stack.length } instead`)
+    }
     return [nil]
 }
 
