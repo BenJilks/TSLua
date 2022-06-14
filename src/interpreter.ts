@@ -35,7 +35,7 @@ export function call(func: CompiledFunction,
             case OpCode.Pop: stack.pop(); break
             case OpCode.Dup: { const x = stack.pop()!; stack.push(x, x); break }
             case OpCode.Swap: { const [x, y] = [stack.pop()!, stack.pop()!]; stack.push(x, y); break }
-            case OpCode.LoadIndex: stack.push(stack.pop()!.table?.get(stack.pop()!.number ?? 0) ?? nil); break
+            case OpCode.LoadIndex: stack.push(stack.pop()!.table?.get(index(stack.pop()!)) ?? nil); break
             case OpCode.Add: stack.push({ data_type: DataType.Number, number: (stack.pop()!.number ?? 0) + (stack.pop()!.number ?? 0) }); break
             case OpCode.Subtract: stack.push({ data_type: DataType.Number, number: (stack.pop()!.number ?? 0) - (stack.pop()!.number ?? 0) }); break
             case OpCode.Multiply: stack.push({ data_type: DataType.Number, number: (stack.pop()!.number ?? 0) * (stack.pop()!.number ?? 0) }); break

@@ -39,6 +39,7 @@ export enum TokenKind {
     Assign,
     Semicolon,
     Comma,
+    Dot,
 
     Function,
     If,
@@ -79,6 +80,7 @@ const single_token_map: Map<string, TokenKind> = new Map([
     ['=', TokenKind.Assign],
     [';', TokenKind.Semicolon],
     [',', TokenKind.Comma],
+    ['.', TokenKind.Dot],
 ])
 
 const keyword_map: Map<string, TokenKind> = new Map([

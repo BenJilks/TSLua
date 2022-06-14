@@ -6,14 +6,14 @@ import { std_lib } from './lib'
 
 const source = `
 
-for i, v in ipairs({"a", "b"}) do
-    print(v)
-end
+table = { x = 1, y = 2, z = { w = 3 } }
+print(table["x"], table["y"])
+print(table.x, table.y, table.z.w)
 
 `
 
 const lexer = new Lexer()
 const chunk = parse(lexer.feed(source))
 const compiled = compile_function(chunk)
-call(compiled, std_lib(), [])
+call(compiled, std_lib(), [], true)
 

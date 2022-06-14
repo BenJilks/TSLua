@@ -93,7 +93,7 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
         value: value,
     }
 
-    while ([TokenKind.OpenBrace, TokenKind.OpenSquare].includes(stream.peek().kind))
+    while ([TokenKind.OpenBrace, TokenKind.OpenSquare, TokenKind.Dot].includes(stream.peek().kind))
     {
         if (expect(stream, TokenKind.OpenBrace) != undefined)
         {
@@ -132,6 +132,25 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
                 kind: ExpressionKind.Index,
                 expression: result,
                 index: index,
+            }
+        }
+
+        if (expect(stream, TokenKind.Dot) != undefined)
+        {
+            const index = expect(stream, TokenKind.Identifier)
+            if (index == undefined)
+                return undefined
+
+            result = { 
+                kind: ExpressionKind.Index,
+                expression: result,
+                index: {
+                    kind: ExpressionKind.Value,
+                    value: {
+                        kind: ValueKind.StringLiteral,
+                        string: index.data,
+                    }
+                },
             }
         }
     }
