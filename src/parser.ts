@@ -193,28 +193,33 @@ function parse_expression(stream: TokenStream, order: number = 0): Expression | 
 function parse_assign_or_expression(stream: TokenStream): Statement | undefined
 {
     const is_local = expect(stream, TokenKind.Local) != undefined
-    const assign_to = parse_expression(stream)
-    if (assign_to == undefined)
-        return undefined
-
-    if (expect(stream, TokenKind.Assign) == undefined)
+    const lhs: Expression[] = []
+    while (lhs.length == 0 || expect(stream, TokenKind.Comma) != undefined)
     {
-        return {
-            kind: StatementKind.Expression,
-            expression: assign_to,
-        }
+        const lvalue = parse_expression(stream)
+        if (lvalue == undefined)
+            return undefined
+        lhs.push(lvalue)
     }
 
-    const value = parse_expression(stream)
-    if (value == undefined)
-        return undefined
+    if (expect(stream, TokenKind.Assign) == undefined)
+        return { kind: StatementKind.Expression, expression: lhs[0] }
+
+    const rhs: Expression[] = []
+    while (rhs.length == 0 || expect(stream, TokenKind.Comma) != undefined)
+    {
+        const rvalue = parse_expression(stream)
+        if (rvalue == undefined)
+            return undefined
+        rhs.push(rvalue)
+    }
 
     return {
         kind: StatementKind.Assignment,
         assignment: {
             local: is_local,
-            lhs: [assign_to],
-            rhs: [value],
+            lhs: lhs.reverse(),
+            rhs: rhs,
         },
     }
 }
@@ -224,13 +229,30 @@ function parse_return(stream: TokenStream): Statement | undefined
     if (expect(stream, TokenKind.Return) == undefined)
         return undefined
 
-    const value = parse_expression(stream)
-    if (value == undefined)
-        return undefined
+    const values: Expression[] = []
+    while (values.length == 0 || expect(stream, TokenKind.Comma) != undefined)
+    {
+        const value = parse_expression(stream)
+        if (value == undefined)
+            return undefined
+        values.push(value)
+    }
+
+    if (values.length == 0)
+    {
+        values.push({
+            kind: ExpressionKind.Value,
+            value: {
+                kind: ValueKind.NilLiteral,
+            }
+        })
+    }
 
     return {
         kind: StatementKind.Return,
-        expression: value,
+        return: {
+            values: values,
+        },
     }
 }
 
@@ -288,9 +310,14 @@ function parse_for(stream: TokenStream): Statement | undefined
     if (expect(stream, TokenKind.For) == undefined)
         return undefined
 
-    const item = expect(stream, TokenKind.Identifier)
-    if (item == undefined)
-        return undefined
+    const items: string[] = []
+    while (items.length == 0 || expect(stream, TokenKind.Comma) != undefined)
+    {
+        const item = expect(stream, TokenKind.Identifier)
+        if (item == undefined)
+            return undefined
+        items.push(item.data)
+    }
 
     if (expect(stream, TokenKind.In) == undefined)
         return undefined
@@ -306,7 +333,7 @@ function parse_for(stream: TokenStream): Statement | undefined
     return {
         kind: StatementKind.For,
         for: {
-            item: item.data,
+            items: items,
             itorator: itorator,
             body: body,
         }

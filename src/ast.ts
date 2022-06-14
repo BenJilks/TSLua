@@ -66,13 +66,13 @@ export interface While {
 }
 
 export interface For {
-    item: string,
+    items: string[],
     itorator: Expression,
     body: Chunk,
 }
 
 export interface Return {
-    value: Expression,
+    values: Expression[],
 }
 
 export enum StatementKind {

@@ -1,4 +1,4 @@
-import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For } from './ast'
+import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return } from './ast'
 import { Value, ValueKind } from './ast'
 import { CompiledFunction, Op, OpCode } from './opcode'
 import { DataType, nil,} from './runtime'
@@ -27,13 +27,21 @@ function compile_value(value: Value | undefined): Op[]
             return [{ code: OpCode.Push, arg: { data_type: DataType.Number, number: value.number } }]
         case ValueKind.StringLiteral:
             return [{ code: OpCode.Push, arg: { data_type: DataType.String, string: value.string } }]
+
         case ValueKind.Function:
-            return [{ code: OpCode.Push, arg: { data_type: DataType.Function, function: compile_function(value.function?.body!, value.function?.parameters!) } }]
+        {
+            return [{
+                code: OpCode.Push, arg: {
+                    data_type: DataType.Function,
+                    function: compile_function(value.function?.body!, value.function?.parameters!)
+                }
+            }]
+        }
 
         case ValueKind.TableLiteral:
         {
             const output: Op[] = [{ code: OpCode.Push, arg: { data_type: DataType.Table, table: new Map() } }]
-            for (const [key, expression] of value.table!.entries())
+            for (const [key, expression] of [...value.table!.entries()].reverse())
             {
                 output.push(...compile_expression(expression))
                 if (typeof(key) === "number")
@@ -135,35 +143,47 @@ function compile_assignment(assignment: Assignment | undefined): Op[]
         throw new Error()
     
     const ops: Op[] = []
-    const rhs = assignment.rhs[0]
-
-    const lhs = assignment.lhs[0]
-    switch (lhs.kind)
+    for (const lhs of assignment.lhs)
     {
-        case ExpressionKind.Value:
+        if (lhs.kind != ExpressionKind.Value)
+            continue
+
+        const identifier = lhs.value?.identifier ?? ''
+        if (assignment.local)
+            ops.push({ code: OpCode.MakeLocal, arg: { data_type: DataType.String, string: identifier } })
+    }
+
+    ops.push({ code: OpCode.AssignPush })
+    for (const rhs of assignment.rhs)
+        ops.push(...compile_expression(rhs))
+    ops.push({ code: OpCode.AssignSet, arg: { data_type: DataType.Number, number: assignment.lhs.length } })
+
+    for (const lhs of assignment.lhs)
+    {
+        switch (lhs.kind)
         {
-            if (lhs.value?.kind != ValueKind.Variable)
+            case ExpressionKind.Value:
+            {
+                if (lhs.value?.kind != ValueKind.Variable)
+                    throw new Error()
+             
+                const identifier = lhs.value?.identifier ?? ''
+                ops.push({ code: OpCode.Store, arg: { data_type: DataType.String, string: identifier } })
+                break
+            }    
+
+            case ExpressionKind.Index:
+            {
+                ops.push(...compile_expression(lhs.expression))
+                ops.push({ code: OpCode.Swap })
+                ops.push(...compile_expression(lhs.index))
+                ops.push({ code: OpCode.StoreIndex })
+                break
+            }
+
+            default:
                 throw new Error()
-         
-            const identifier = lhs.value?.identifier ?? ''
-            ops.push(...compile_expression(rhs))
-            if (assignment.local)
-                ops.push({ code: OpCode.MakeLocal, arg: { data_type: DataType.String, string: identifier } })
-            ops.push({ code: OpCode.Store, arg: { data_type: DataType.String, string: identifier } })
-            break
-        }    
-
-        case ExpressionKind.Index:
-        {
-            ops.push(...compile_expression(lhs.expression))
-            ops.push(...compile_expression(rhs))
-            ops.push(...compile_expression(lhs.index))
-            ops.push({ code: OpCode.StoreIndex })
-            break
         }
-
-        default:
-            throw new Error()
     }
 
     return ops
@@ -214,27 +234,32 @@ function compile_for(for_block: For | undefined): Op[]
     ops.push(...compile_expression(for_block.itorator))
 
     const after_creating_itorator = ops.length
+    ops.push({ code: OpCode.AssignPush })
     ops.push({ code: OpCode.Dup })
     ops.push({ code: OpCode.Push, arg: { data_type: DataType.Number, number: 0 } })
     ops.push({ code: OpCode.Call })
 
     ops.push({ code: OpCode.Dup })
     ops.push({ code: OpCode.IsNil })
-    ops.push({ code: OpCode.JumpIfNot, arg: { data_type: DataType.Number, number: body.length + 2 } })
+    ops.push({ code: OpCode.JumpIfNot, arg: { data_type: DataType.Number, number: body.length + for_block.items.length + 2 } })
+    ops.push({ code: OpCode.AssignSet, arg: { data_type: DataType.Number, number: for_block.items.length } })
 
-    ops.push({ code: OpCode.Store, arg: { data_type: DataType.String, string: for_block.item } })
+    for (const item of for_block.items.reverse())
+        ops.push({ code: OpCode.Store, arg: { data_type: DataType.String, string: item } })
     ops.push(...body)
     ops.push({ code: OpCode.Jump, arg: { data_type: DataType.Number, number: -ops.length + after_creating_itorator - 1 } })
     return ops
 }
 
-function compile_return(return_expression: Expression | undefined): Op[]
+function compile_return(return_block: Return | undefined): Op[]
 {
-    if (return_expression == undefined)
+    if (return_block == undefined)
         throw new Error()
 
     const ops: Op[] = []
-    ops.push(...compile_expression(return_expression))
+    for (const value of return_block.values)
+        ops.push(...compile_expression(value))
+
     ops.push({ code: OpCode.Return })
     return ops
 }
@@ -264,7 +289,7 @@ function compile_chunk(chunk: Chunk): Op[]
                 ops.push(...compile_for(statement.for))
                 break
             case StatementKind.Return:
-                ops.push(...compile_return(statement.expression))
+                ops.push(...compile_return(statement.return))
         }
     }
 

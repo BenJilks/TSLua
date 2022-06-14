@@ -6,6 +6,7 @@ export enum OpCode {
     Push,
     Pop,
     Dup,
+    Swap,
 
     LoadIndex,
     StoreIndex,
@@ -24,6 +25,10 @@ export enum OpCode {
     Return,
     Jump,
     JumpIfNot,
+
+    // NOTE: Debug opcode, not needed for operation.
+    AssignPush,
+    AssignSet,
 }
 
 export function op_code_name(op_code: OpCode): string
@@ -35,6 +40,7 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Push: return 'Push'
         case OpCode.Pop: return 'Pop'
         case OpCode.Dup: return 'Dup'
+        case OpCode.Swap: return 'Swap'
         case OpCode.LoadIndex: return 'LoadIndex'
         case OpCode.StoreIndex: return 'StoreIndex'
         case OpCode.Add: return 'Add'
@@ -49,6 +55,9 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Return: return 'Return'
         case OpCode.Jump: return 'Jump'
         case OpCode.JumpIfNot: return 'JumpIfNot'
+
+        case OpCode.AssignPush: return 'AssignPush'
+        case OpCode.AssignSet: return 'AssignSet'
     }
 }
 

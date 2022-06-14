@@ -10,7 +10,7 @@ export enum DataType {
     Table,
 }
 
-export type NativeFunction = (...args: Variable[]) => Variable
+export type NativeFunction = (...args: Variable[]) => Variable[]
 
 export interface Variable {
     data_type: DataType,
