@@ -74,6 +74,8 @@ function parse_value(stream: TokenStream): Value | undefined
         
         case TokenKind.SquiglyOpen:
             return parse_table(stream)
+        case TokenKind.Function:
+            return parse_function_value(stream)
 
         default:
             return undefined

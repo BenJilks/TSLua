@@ -1,25 +1,19 @@
 import { Lexer } from './lexer'
 import { parse } from './parser'
-import { run, new_environment } from './interpreter'
+import { compile_function } from './compiler'
+import { call } from './interpreter'
+import { std_lib } from './lib'
 
 const source = `
 
-states = {
-    "inital",
-    "download",
-    "done",
-}
-
-i = 0
-while i < 10 do
-    print(i)
-    i = i + 1
-end
+table = { "a", "b", "c", "d", x = 21 }
+table[69] = "nice"
+print(table)
 
 `
 
 const lexer = new Lexer()
 const chunk = parse(lexer.feed(source))
-const environment = new_environment()
-run(chunk, environment)
+const compiled = compile_function(chunk, [])
+call(compiled, std_lib())
 
