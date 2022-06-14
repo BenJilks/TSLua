@@ -1,12 +1,12 @@
-import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk } from './ast'
+import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For } from './ast'
 import { Value, ValueKind } from './ast'
 import { CompiledFunction, Op, OpCode } from './opcode'
 import { DataType, nil,} from './runtime'
 
-export function compile_function(chunk: Chunk, parameters: string[]): CompiledFunction
+export function compile_function(chunk: Chunk, parameters?: string[]): CompiledFunction
 {
     return {
-        parameters: parameters,
+        parameters: parameters ?? [],
         locals: new Map(),
         ops: compile_chunk(chunk),
     }
@@ -204,6 +204,30 @@ function compile_while(while_block: While | undefined): Op[]
     return ops
 }
 
+function compile_for(for_block: For | undefined): Op[]
+{
+    if (for_block == undefined)
+        throw new Error()
+
+    const ops: Op[] = []
+    const body = compile_chunk(for_block.body)
+    ops.push(...compile_expression(for_block.itorator))
+
+    const after_creating_itorator = ops.length
+    ops.push({ code: OpCode.Dup })
+    ops.push({ code: OpCode.Push, arg: { data_type: DataType.Number, number: 0 } })
+    ops.push({ code: OpCode.Call })
+
+    ops.push({ code: OpCode.Dup })
+    ops.push({ code: OpCode.IsNil })
+    ops.push({ code: OpCode.JumpIfNot, arg: { data_type: DataType.Number, number: body.length + 2 } })
+
+    ops.push({ code: OpCode.Store, arg: { data_type: DataType.String, string: for_block.item } })
+    ops.push(...body)
+    ops.push({ code: OpCode.Jump, arg: { data_type: DataType.Number, number: -ops.length + after_creating_itorator - 1 } })
+    return ops
+}
+
 function compile_return(return_expression: Expression | undefined): Op[]
 {
     if (return_expression == undefined)
@@ -225,6 +249,7 @@ function compile_chunk(chunk: Chunk): Op[]
         {
             case StatementKind.Expression:
                 ops.push(...compile_expression(statement.expression))
+                ops.push({ code: OpCode.Pop })
                 break
             case StatementKind.Assignment:
                 ops.push(...compile_assignment(statement.assignment))
@@ -234,6 +259,9 @@ function compile_chunk(chunk: Chunk): Op[]
                 break
             case StatementKind.While:
                 ops.push(...compile_while(statement.while))
+                break
+            case StatementKind.For:
+                ops.push(...compile_for(statement.for))
                 break
             case StatementKind.Return:
                 ops.push(...compile_return(statement.expression))

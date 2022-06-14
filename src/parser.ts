@@ -283,6 +283,36 @@ function parse_while(stream: TokenStream): Statement | undefined
     }
 }
 
+function parse_for(stream: TokenStream): Statement | undefined
+{
+    if (expect(stream, TokenKind.For) == undefined)
+        return undefined
+
+    const item = expect(stream, TokenKind.Identifier)
+    if (item == undefined)
+        return undefined
+
+    if (expect(stream, TokenKind.In) == undefined)
+        return undefined
+
+    const itorator = parse_expression(stream)
+    if (itorator == undefined)
+        return undefined
+
+    if (expect(stream, TokenKind.Do) == undefined)
+        return undefined
+
+    const body = parse(stream)
+    return {
+        kind: StatementKind.For,
+        for: {
+            item: item.data,
+            itorator: itorator,
+            body: body,
+        }
+    }
+}
+
 function parse_function_params(stream: TokenStream): string[] | undefined
 {
     if (expect(stream, TokenKind.OpenBrace) == undefined)
@@ -368,6 +398,8 @@ function parse_statement(stream: TokenStream): Statement | undefined
             return parse_if(stream)
         case TokenKind.While:
             return parse_while(stream)
+        case TokenKind.For:
+            return parse_for(stream)
         case TokenKind.Function:
             return parse_function(stream)
         case TokenKind.End:

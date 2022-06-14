@@ -1,6 +1,6 @@
 import { DataType, nil, Variable } from './runtime'
 
-function to_string(variable: Variable): string
+export function to_string(variable: Variable): string
 {
     switch (variable.data_type)
     {

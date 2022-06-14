@@ -65,6 +65,12 @@ export interface While {
     body: Chunk,
 }
 
+export interface For {
+    item: string,
+    itorator: Expression,
+    body: Chunk,
+}
+
 export interface Return {
     value: Expression,
 }
@@ -75,6 +81,7 @@ export enum StatementKind {
     Assignment,
     If,
     While,
+    For,
     Return,
 }
 
@@ -84,6 +91,7 @@ export interface Statement {
     assignment?: Assignment,
     if?: IfBlock,
     while?: While,
+    for?: For,
     return?: Return,
 }
 

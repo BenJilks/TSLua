@@ -4,6 +4,7 @@ export enum OpCode {
     Load,
     Store,
     Push,
+    Pop,
     Dup,
 
     LoadIndex,
@@ -16,6 +17,7 @@ export enum OpCode {
 
     LessThen,
     GreaterThen,
+    IsNil,
 
     MakeLocal,
     Call,
@@ -31,6 +33,7 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Load: return 'Load'
         case OpCode.Store: return 'StoreGlobal'
         case OpCode.Push: return 'Push'
+        case OpCode.Pop: return 'Pop'
         case OpCode.Dup: return 'Dup'
         case OpCode.LoadIndex: return 'LoadIndex'
         case OpCode.StoreIndex: return 'StoreIndex'
@@ -40,6 +43,7 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Divide: return 'Divide'
         case OpCode.LessThen: return 'LessThen'
         case OpCode.GreaterThen: return 'GreaterThen'
+        case OpCode.IsNil: return "IsNil"
         case OpCode.MakeLocal: return 'MakeLocal'
         case OpCode.Call: return 'Call'
         case OpCode.Return: return 'Return'

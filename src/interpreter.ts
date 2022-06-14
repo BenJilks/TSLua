@@ -1,5 +1,6 @@
 import { CompiledFunction, OpCode, op_code_name } from './opcode'
 import {DataType, nil, Variable} from './runtime'
+import * as std from './lib'
 
 function index(val: Variable): string | number
 {
@@ -8,11 +9,13 @@ function index(val: Variable): string | number
 
 export function call(func: CompiledFunction,
                      globals?: Map<string, Variable>,
-                     args?: Variable[]): Variable
+                     args?: Variable[],
+                     debug?: boolean): Variable
 {
     const bytecode = func.ops
     globals = globals ?? new Map()
     args = args ?? []
+    debug = debug ?? false
 
     let ip = 0
     let stack: Variable[] = []
@@ -22,10 +25,9 @@ export function call(func: CompiledFunction,
     while (ip < bytecode.length)
     {
         const { code, arg } = bytecode[ip++]
-        console.log(ip - 1, op_code_name(code), arg)
-
         switch(code)
         {
+            case OpCode.Pop: stack.pop(); break
             case OpCode.Dup: const x = stack.pop()!; stack.push(x, x); break
             case OpCode.LoadIndex: stack.push(stack.pop()!.table?.get(stack.pop()!.number ?? 0) ?? nil); break
             case OpCode.Add: stack.push({ data_type: DataType.Number, number: (stack.pop()!.number ?? 0) + (stack.pop()!.number ?? 0) }); break
@@ -34,6 +36,7 @@ export function call(func: CompiledFunction,
             case OpCode.Divide: stack.push({ data_type: DataType.Number, number: (stack.pop()!.number ?? 0) / (stack.pop()!.number ?? 0) }); break
             case OpCode.LessThen: stack.push({ data_type: DataType.Boolean, boolean: (stack.pop()!.number ?? 0) < (stack.pop()!.number ?? 0) }); break
             case OpCode.GreaterThen: stack.push({ data_type: DataType.Boolean, boolean: (stack.pop()!.number ?? 0) > (stack.pop()!.number ?? 0) }); break
+            case OpCode.IsNil: stack.push({ data_type: DataType.Boolean, boolean: stack.pop()!.data_type == DataType.Nil}); break
             case OpCode.Return: return stack.pop()!;
             case OpCode.Jump: ip += arg?.number!; break
             case OpCode.JumpIfNot: ip += stack.pop()?.boolean! ? arg?.number! : 0; break
@@ -98,6 +101,12 @@ export function call(func: CompiledFunction,
                     stack.push(call(func_var.function!, globals, args))
                 break
             }
+        }
+
+        if (debug)
+        {
+            console.log(ip - 1, op_code_name(code), arg)
+            console.log('stack:', ...stack.map(std.to_string))
         }
     }
 
