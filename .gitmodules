@@ -1,0 +1,9 @@
+[submodule "lua"]
+	path = lua
+	url = https://github.com/lua/lua
+[submodule "wasi-libc"]
+	path = wasi-libc
+	url = https://github.com/CraneStation/wasi-libc.git
+[submodule "libclang_rt.builtins-wasm32.a"]
+	path = libclang_rt.builtins-wasm32.a
+	url = https://github.com/jedisct1/libclang_rt.builtins-wasm32.a
