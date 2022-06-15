@@ -55,12 +55,7 @@ export class Lua
     {
         const lexer = new Lexer()
         const ast = parse(lexer.feed(script))
-        console.log(JSON.stringify(ast, undefined, 4))
-
         this.program = compile(ast)
-        for (const { code, arg } of this.program)
-            console.log(op_code_name(code), arg)
-
         this.globals = globals ?? std.std_lib()
         this.debug = debug ?? false
         this.reset()
@@ -98,25 +93,37 @@ export class Lua
         this.assign_stack_heigth = 0
     }
 
-    run()
+    run(): Error | void
     {
         let step_count = 0
-        while (this.step())
+        while (true)
         {
+            const result = this.step()
+            if (result instanceof Error)
+                return result
+            else if (!result)
+                return
+
             step_count += 1
             if (step_count > 1000)
                 throw new Error()
         }
     }
 
-    step(): boolean
+    step(): boolean | Error
     {
         if (this.ip >= this.program.length)
             return false
 
-        const { code, arg } = this.program[this.ip++]
+        const op = this.program[this.ip++] 
+        const { code, arg } = op
         if (this.debug)
             console.log(this.ip - 1, op_code_name(code), arg)
+
+        function error(message: string)
+        {
+            return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
+        }
 
         switch(code)
         {
@@ -130,8 +137,8 @@ export class Lua
             case OpCode.Divide: this.stack.push(make_number((this.stack.pop()!.number ?? 0) / (this.stack.pop()!.number ?? 0))); break
             case OpCode.LessThen: this.stack.push(make_boolean((this.stack.pop()!.number ?? 0) < (this.stack.pop()!.number ?? 0))); break
             case OpCode.GreaterThen: this.stack.push(make_boolean((this.stack.pop()!.number ?? 0) > (this.stack.pop()!.number ?? 0))); break
-            case OpCode.And: this.stack.push(make_boolean(is_true(this.stack.pop()) && is_true(this.stack.pop()))); break
-            case OpCode.Or: this.stack.push(make_boolean(is_true(this.stack.pop()) || is_true(this.stack.pop()))); break
+            case OpCode.And: { const [x, y] = [this.stack.pop(), this.stack.pop()]; this.stack.push(make_boolean(is_true(x) && is_true(y))) } break
+            case OpCode.Or: { const [x, y] = [this.stack.pop(), this.stack.pop()]; this.stack.push(make_boolean(is_true(x) || is_true(y))) } break
             case OpCode.Not: this.stack.push(make_boolean(!is_true(this.stack.pop()))); break
             case OpCode.IsNil: this.stack.push(make_boolean(this.stack.pop()!.data_type == DataType.Nil)); break
             case OpCode.Jump: this.ip += arg!.number!; break
@@ -191,7 +198,7 @@ export class Lua
                     break
                 }
 
-                throw new Error(`Lua value '${ name }' not defined`)
+                return error(`Lua value '${ name }' is not defined`)
             }
 
             case OpCode.Call:
@@ -220,7 +227,7 @@ export class Lua
                 const expected = arg!.number!
                 if (got == expected)
                     break
-                throw new Error(
+                return error(
                     `Execpect ${ expected } ` +
                     `argument(s), got ${ got }`)
             }
@@ -232,7 +239,7 @@ export class Lua
                 const expected = arg!.number!
                 if (value_count == expected)
                     break
-                throw new Error(
+                return error(
                     `Execpect to assign ${ expected } ` +
                     `value(s), got ${ value_count } instead`)
             }

@@ -14,6 +14,7 @@ function compile_function(chunk: Chunk, token: Token, parameters: Token[], funct
         ops.push({ code: OpCode.Store, arg: make_string(parameter.data), debug: parameter.debug })
     }
     ops.push(...compile_chunk(chunk, functions))
+    ops.push({ code: OpCode.Push, arg: nil, debug: token.debug })
     ops.push({ code: OpCode.Return, arg: make_number(0), debug: token.debug })
 
     functions.push(ops)
@@ -321,6 +322,7 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
 
     ops.push({ code: OpCode.Dup, debug: debug })
     ops.push({ code: OpCode.IsNil, debug: debug })
+    ops.push({ code: OpCode.Not, debug: debug })
     ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + for_block.items.length + 2), debug: debug })
     ops.push({ code: OpCode.AssignSet, arg: make_number(for_block.items.length), debug: debug })
 
@@ -399,7 +401,7 @@ export function compile(chunk: Chunk): Op[]
 {
     const functions: Op[][] = []
     const code = compile_chunk(chunk, functions)
-    code.push({ code: OpCode.Return, arg: make_number(0), debug: { line: 0, column: 0 } })
+    code.push({ code: OpCode.Return, arg: make_number(1), debug: { line: 0, column: 0 } })
 
     const function_locations: number[] = []
     for (const func of functions)

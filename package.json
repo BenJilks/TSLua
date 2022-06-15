@@ -2,23 +2,18 @@
   "name": "tslua",
   "version": "1.0.0",
   "description": "",
+  "scripts": {
+      "test": "jest"
+  },
   "files": [
-    "index.ts",
-    "src/ast.ts",
-    "src/compiler.ts",
-    "src/lexer.ts",
-    "src/lib.ts",
-    "src/link.ts",
-    "src/lua.ts",
-    "src/opcode.ts",
-    "src/parser.ts",
-    "src/runtime.ts"
+    "index.ts"
   ],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.28.0",
-    "eslint": "^8.17.0",
+  "devDependencies": {
+    "@types/jest": "^28.1.1",
+    "jest": "^28.1.1",
+    "ts-jest": "^28.0.5",
     "typescript": "^4.7.3"
   }
 }

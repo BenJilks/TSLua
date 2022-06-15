@@ -54,6 +54,8 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Divide: return 'Divide'
         case OpCode.LessThen: return 'LessThen'
         case OpCode.GreaterThen: return 'GreaterThen'
+        case OpCode.And: return 'And'
+        case OpCode.Or: return 'Or'
         case OpCode.Not: return 'Not'
         case OpCode.IsNil: return 'IsNil'
         case OpCode.MakeLocal: return 'MakeLocal'

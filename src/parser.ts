@@ -25,29 +25,34 @@ function parse_table(stream: TokenStream): Value | undefined
     if (squigly_open == undefined)
         return undefined
 
-    const elements: Map<string|number, Expression> = new Map()
+    const elements: Map<Token, Expression> = new Map()
     let current_numeric_key = 1
     while (stream.peek().kind != TokenKind.SquiglyClose)
     {
-        let key: string | number
-
-        if (stream.peek(1).kind == TokenKind.Identifier &&
-            stream.peek(2).kind == TokenKind.Assign)
-        {
-            key = stream.next().data
-            expect(stream, TokenKind.Assign)
-        }
-        else
-        {
-            key = current_numeric_key
-            current_numeric_key += 1
-        }
-
         const element = parse_expression(stream)
         if (element == undefined)
             return undefined
-        elements.set(key, element)
 
+        if (expect(stream, TokenKind.Assign) != undefined)
+        {
+            const value = parse_expression(stream)
+            if (value == undefined)
+                return undefined
+
+            if (element.kind != ExpressionKind.Value)
+                throw new Error()
+            elements.set(element.token, value)
+            continue
+        }
+
+        const key = {
+            kind: TokenKind.NumberLiteral,
+            data: current_numeric_key.toString(),
+            debug: element.token.debug,
+        }
+
+        current_numeric_key += 1
+        elements.set(key, element)
         if (expect(stream, TokenKind.Comma) == undefined)
             break
     }
@@ -70,16 +75,12 @@ function parse_value(stream: TokenStream): Value | undefined
         case TokenKind.NumberLiteral: 
             return { kind: ValueKind.NumberLiteral, token: stream.next(), number: parseFloat(token.data) } 
         case TokenKind.BooleanLiteral:
-            stream.next()
             return { kind: ValueKind.BooleanLiteral, token: stream.next(), boolean: token.data == 'true' } 
         case TokenKind.StringLiteral:
-            stream.next()
             return { kind: ValueKind.StringLiteral, token: stream.next(), string: token.data } 
         case TokenKind.NilLiteral:
-            stream.next()
             return { kind: ValueKind.NilLiteral, token: stream.next() } 
         case TokenKind.Identifier:
-            stream.next()
             return { kind: ValueKind.Variable, token: stream.next(), identifier: token.data }
         
         case TokenKind.SquiglyOpen:
@@ -170,7 +171,7 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
             }
         }
 
-        const dot = expect(stream, TokenKind.OpenSquare)
+        const dot = expect(stream, TokenKind.Dot)
         if (dot != undefined)
         {
             const index = expect(stream, TokenKind.Identifier)
@@ -259,7 +260,7 @@ function parse_local_statement(local: Token, values: Expression[]): Statement
             token: local,
             names: values
                 .filter(x => x?.value?.identifier != undefined)
-                .map(x => x?.value?.token!)
+                .map(x => x!.value!.token!)
         },
     }
 }

@@ -152,6 +152,8 @@ export class Lexer
     private line: number
     private column: number
 
+    private token_start_debug: Debug
+
     constructor() 
     {
         this.state = State.Initial
@@ -159,6 +161,7 @@ export class Lexer
         this.buffer = ''
         this.line = 1
         this.column = 1
+        this.token_start_debug = { line: 0, column: 0 }
     }
 
     private token(token: Token): Token
@@ -179,8 +182,24 @@ export class Lexer
 
     private consume() 
     {
-        if (this.processing_stream.length > 0)
-            this.processing_stream.shift()
+        if (this.processing_stream.length <= 0)
+            return
+
+        this.column += 1
+        if (this.processing_stream.shift() == '\n')
+        {
+            this.line += 1
+            this.column = 1
+        }
+    }
+
+    private start_token()
+    {
+        this.token_start_debug = {
+            line: this.line,
+            column: this.column,
+        }
+        this.buffer = ''
     }
 
     private *initial() 
@@ -219,6 +238,7 @@ export class Lexer
 
         if (c == '"')
         {
+            this.start_token()
             this.consume()
             this.state = State.StringLiteral
             return
@@ -226,12 +246,14 @@ export class Lexer
 
         if (/[a-zA-Z_]/.test(c))
         {
+            this.start_token()
             this.state = State.Identifier
             return
         }
 
         if (/[0-9]/.test(c))
         {
+            this.start_token()
             this.state = State.NumberLiteral
             return
         }
@@ -252,16 +274,12 @@ export class Lexer
         yield this.token({
             data: this.buffer,
             kind: kind,
-            debug: {
-                line: this.line,
-                column: this.column,
-            },
+            debug: this.token_start_debug,
         })
 
         if (should_consume_last)
             this.consume()
 
-        this.buffer = ''
         this.state = State.Initial
     }
 
@@ -294,12 +312,8 @@ export class Lexer
         yield this.token({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
-            debug: {
-                line: this.line,
-                column: this.column,
-            },
+            debug: this.token_start_debug,
         })
-        this.buffer = ''
         this.state = State.Initial
     }
 
@@ -324,12 +338,8 @@ export class Lexer
         yield this.token({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
-            debug: {
-                line: this.line,
-                column: this.column,
-            },
+            debug: this.token_start_debug,
         })
-        this.buffer = ''
         this.state = State.Initial
     }
 
@@ -347,12 +357,8 @@ export class Lexer
         yield this.token({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
-            debug: {
-                line: this.line,
-                column: this.column,
-            },
+            debug: this.token_start_debug,
         })
-        this.buffer = ''
         this.state = State.Initial
     }
 
@@ -369,12 +375,8 @@ export class Lexer
         yield this.token({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
-            debug: {
-                line: this.line,
-                column: this.column,
-            },
+            debug: this.token_start_debug,
         })
-        this.buffer = ''
         this.state = State.Initial
     }
 
