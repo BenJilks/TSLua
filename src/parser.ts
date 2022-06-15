@@ -259,8 +259,13 @@ function parse_local_statement(local: Token, values: Expression[]): Statement
         local: {
             token: local,
             names: values
-                .filter(x => x?.value?.identifier != undefined)
-                .map(x => x!.value!.token!)
+                .filter(x => x != undefined)
+                .map(x =>
+                {
+                    if (x == undefined || x.value == undefined)
+                        throw new Error()
+                    return x.value.token
+                }),
         },
     }
 }

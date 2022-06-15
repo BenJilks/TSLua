@@ -32,11 +32,11 @@ function compile_value(value: Value | undefined, functions: Op[][]): Op[]
         case ValueKind.NilLiteral:
             return [{ code: OpCode.Push, arg: nil, debug: debug }]
         case ValueKind.BooleanLiteral:
-            return [{ code: OpCode.Push, arg: make_boolean(value.boolean!), debug: debug }]
+            return [{ code: OpCode.Push, arg: make_boolean(value.boolean ?? false), debug: debug }]
         case ValueKind.NumberLiteral:
-            return [{ code: OpCode.Push, arg: make_number(value.number!), debug: debug }]
+            return [{ code: OpCode.Push, arg: make_number(value.number ?? 0), debug: debug }]
         case ValueKind.StringLiteral:
-            return [{ code: OpCode.Push, arg: make_string(value.string!), debug: debug }]
+            return [{ code: OpCode.Push, arg: make_string(value.string ?? ''), debug: debug }]
 
         case ValueKind.Function:
         {
@@ -44,9 +44,9 @@ function compile_value(value: Value | undefined, functions: Op[][]): Op[]
                 code: OpCode.Push, arg: {
                     data_type: DataType.Function,
                     function_id: compile_function(
-                        value.function!.body!,
+                        value.function?.body ?? { statements: [] },
                         value.token,
-                        value.function!.parameters!,
+                        value.function?.parameters ?? [],
                         functions),
                 },
                 debug: debug,
@@ -64,7 +64,7 @@ function compile_value(value: Value | undefined, functions: Op[][]): Op[]
                 debug: debug,
             }]
 
-            for (const [key, expression] of [...value.table!.entries()].reverse())
+            for (const [key, expression] of [...value.table?.entries() ?? []].reverse())
             {
                 output.push(...compile_expression(expression, functions))
                 if (key.kind == TokenKind.NumberLiteral)
@@ -73,7 +73,7 @@ function compile_value(value: Value | undefined, functions: Op[][]): Op[]
                     output.push({ code: OpCode.Push, arg: make_string(key.data), debug: key.debug })
             }
 
-            output.push({ code: OpCode.StoreIndex, arg: make_number(value.table!.size), debug: debug })
+            output.push({ code: OpCode.StoreIndex, arg: make_number(value.table?.size ?? 0), debug: debug })
             return output
         }
 
@@ -81,7 +81,7 @@ function compile_value(value: Value | undefined, functions: Op[][]): Op[]
         {
             return [{
                 code: OpCode.Load,
-                arg: { data_type: DataType.String, string: value.identifier },
+                arg: { data_type: DataType.String, string: value.identifier ?? '' },
                 debug: debug,
             }]
         }
@@ -360,7 +360,8 @@ function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
         {
             case StatementKind.Expression:
                 ops.push(...compile_expression(statement.expression, functions))
-                ops.push({ code: OpCode.Pop, debug: statement.expression!.token.debug })
+                if (statement.expression != undefined)
+                    ops.push({ code: OpCode.Pop, debug: statement.expression.token.debug })
                 break
             case StatementKind.Assignment:
                 ops.push(...compile_assignment(statement.assignment, functions))

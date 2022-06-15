@@ -4,13 +4,13 @@ export function variable_to_string(variable: Variable): string
 {
     switch (variable.data_type)
     {
-        case DataType.Nil: return "nil"
-        case DataType.Boolean: return variable.boolean! ? "true" : "false"
-        case DataType.Number: return variable.number!.toString()
-        case DataType.String: return variable.string!
+        case DataType.Nil: return 'nil'
+        case DataType.Boolean: return variable.boolean ? 'true' : 'false'
+        case DataType.Number: return variable.number?.toString() ?? '0'
+        case DataType.String: return variable.string ?? ''
         case DataType.Table: 
         {
-            return `{ ${ [...variable.table!.entries()]
+            return `{ ${ [...variable.table?.entries() ?? []]
                 .map(([i, v]) => `${ i } = ${ variable_to_string(v) }`).join(', ') } }`
         }
         default: return '<Lua Object>'
@@ -38,12 +38,15 @@ function ipairs(table: Variable): Variable[]
                 return [nil]
 
             const [i, v] = entries[index++]
-            if (typeof(i) === "number") {
+            if (typeof(i) === 'number') 
+            {
                 return [{ data_type: DataType.Number, number: i }, v] 
-            } else {
+            }
+            else 
+            {
                 return [{ data_type: DataType.String, string: i }, v] 
             }
-        }
+        },
     }]
 }
 
@@ -58,7 +61,7 @@ function range(count: Variable): Variable[]
             if (index >= (count.number ?? 0))
                 return [nil]
             return [{ data_type: DataType.Number, number: index }]
-        }
+        },
     }]
 }
 

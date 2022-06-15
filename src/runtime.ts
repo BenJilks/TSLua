@@ -10,17 +10,6 @@ export enum DataType {
 }
 
 export type NativeFunction = (...args: Variable[]) => Variable[]
-
-export type VariableNew =
-    { data_type: DataType.Nil } |
-    { data_type: DataType.Boolean, boolean: boolean } |
-    { data_type: DataType.Number, boolean: boolean } |
-    { data_type: DataType.String, boolean: boolean } |
-    { data_type: DataType.Function, boolean: boolean } |
-    { data_type: DataType.NativeFunction, boolean: boolean } |
-    { data_type: DataType.Table, boolean: boolean }
-
-
 export interface Variable {
     data_type: DataType,
     boolean?: boolean,

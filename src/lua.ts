@@ -5,16 +5,16 @@ import { Lexer } from './lexer'
 import { parse } from './parser'
 import { compile } from './compiler'
 
-function index(val: Variable | undefined): string | number
+function index(val: Variable | undefined): string | number | undefined
 {
     if (val == undefined)
-        return 0
+        return undefined
     else if (val.data_type == DataType.String)
-        return val.string!
+        return val.string
     else if (val.data_type == DataType.Number)
-        return val.number!
+        return val.number
     else
-        return 0
+        return undefined
 }
 
 function is_true(val: Variable | undefined): boolean
@@ -24,9 +24,9 @@ function is_true(val: Variable | undefined): boolean
 
     switch (val.data_type)
     {
-        case DataType.Number: return val.number! != 0
-        case DataType.String: return val.string! != ''
-        case DataType.Boolean: return val.boolean!
+        case DataType.Number: return val.number != 0
+        case DataType.String: return val.string != ''
+        case DataType.Boolean: return val.boolean ?? false
         case DataType.Function: return true
         case DataType.NativeFunction: return true
         default:
@@ -125,65 +125,129 @@ export class Lua
             return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
         }
 
+        function operation(op: (x: number, y: number) => number)
+        {
+            const x = this.stack.pop()?.number ?? 0
+            const y = this.stack.pop()?.number ?? 0
+            this.stack.push(make_number(op(x, y)))
+        }
+
+        function compair(op: (x: number, y: number) => boolean)
+        {
+            const x = this.stack.pop()?.number ?? 0
+            const y = this.stack.pop()?.number ?? 0
+            this.stack.push(make_boolean(op(x, y)))
+        }
+
         switch(code)
         {
-            case OpCode.Pop: this.stack.pop(); break
-            case OpCode.Dup: { const x = this.stack.pop()!; this.stack.push(x, x); break }
-            case OpCode.Swap: { const [x, y] = [this.stack.pop()!, this.stack.pop()!]; this.stack.push(x, y); break }
-            case OpCode.LoadIndex: this.stack.push(this.stack.pop()!.table?.get(index(this.stack.pop()!)) ?? nil); break
-            case OpCode.Add: this.stack.push(make_number((this.stack.pop()!.number ?? 0) + (this.stack.pop()!.number ?? 0))); break
-            case OpCode.Subtract: this.stack.push(make_number((this.stack.pop()!.number ?? 0) - (this.stack.pop()!.number ?? 0))); break
-            case OpCode.Multiply: this.stack.push(make_number((this.stack.pop()!.number ?? 0) * (this.stack.pop()!.number ?? 0))); break
-            case OpCode.Divide: this.stack.push(make_number((this.stack.pop()!.number ?? 0) / (this.stack.pop()!.number ?? 0))); break
-            case OpCode.LessThen: this.stack.push(make_boolean((this.stack.pop()!.number ?? 0) < (this.stack.pop()!.number ?? 0))); break
-            case OpCode.GreaterThen: this.stack.push(make_boolean((this.stack.pop()!.number ?? 0) > (this.stack.pop()!.number ?? 0))); break
-            case OpCode.And: { const [x, y] = [this.stack.pop(), this.stack.pop()]; this.stack.push(make_boolean(is_true(x) && is_true(y))) } break
-            case OpCode.Or: { const [x, y] = [this.stack.pop(), this.stack.pop()]; this.stack.push(make_boolean(is_true(x) || is_true(y))) } break
+            case OpCode.Pop:
+                this.stack.pop()
+                break
+
+            case OpCode.Dup:
+            { 
+                const x = this.stack.pop() ?? nil
+                this.stack.push(x, x)
+                break
+            }
+
+            case OpCode.Swap:
+            { 
+                const x = this.stack.pop() ?? nil
+                const y = this.stack.pop() ?? nil
+                this.stack.push(x, y)
+                break
+            }
+
+            case OpCode.LoadIndex:
+            {
+                const table = this.stack.pop()
+                if (table == undefined || table.table == undefined)
+                    return error('Can only index on tables')
+
+                const i = index(this.stack.pop())
+                if (i == undefined)
+                    return error('Invalid index, must be a number or string')
+
+                this.stack.push(table.table.get(i) ?? nil)
+                break
+            }
+
+            case OpCode.Add: operation((x, y) => x + y); break
+            case OpCode.Subtract: operation((x, y) => x - y); break
+            case OpCode.Multiply: operation((x, y) => x * y); break
+            case OpCode.Divide: operation((x, y) => x / y); break
+            case OpCode.LessThen: compair((x, y) => x < y); break
+            case OpCode.GreaterThen: compair((x, y) => x > y); break
+
+            case OpCode.And:
+            {
+                const [x, y] = [this.stack.pop(), this.stack.pop()]
+                this.stack.push(make_boolean(is_true(x) && is_true(y)))
+                break
+            } 
+
+            case OpCode.Or:
+            {
+                const [x, y] = [this.stack.pop(), this.stack.pop()]
+                this.stack.push(make_boolean(is_true(x) || is_true(y)))
+                break
+            }
+
             case OpCode.Not: this.stack.push(make_boolean(!is_true(this.stack.pop()))); break
-            case OpCode.IsNil: this.stack.push(make_boolean(this.stack.pop()!.data_type == DataType.Nil)); break
-            case OpCode.Jump: this.ip += arg!.number!; break
-            case OpCode.JumpIfNot: if (!is_true(this.stack.pop())) { this.ip += arg!.number! } break
-            case OpCode.MakeLocal: this.locals.set(arg!.string!, nil); break
+            case OpCode.IsNil: this.stack.push(make_boolean((this.stack.pop() ?? nil) == nil)); break
+            case OpCode.Jump: this.ip += arg?.number ?? 0; break
+            case OpCode.JumpIfNot: if (!is_true(this.stack.pop())) { this.ip += arg?.number ?? 0 } break
+            case OpCode.MakeLocal: this.locals.set(arg?.string ?? '', nil); break
 
             case OpCode.Return:
             {
                 if (this.call_stack.length == 0)
                     return false
-                this.ip = this.call_stack.pop()!
-                this.locals = this.locals_stack.pop()!
+                this.ip = this.call_stack.pop() ?? this.program.length
+                this.locals = this.locals_stack.pop() ?? new Map()
                 break
             }
 
             case OpCode.StoreIndex:
             {
                 const count = arg?.number ?? 1
-                const table = this.stack[this.stack.length - count*2 - 1]!.table!
+                const table = this.stack[this.stack.length - count*2 - 1] ?? nil
+                const key = index(this.stack.pop())
+                const value = this.stack.pop() ?? nil
+
+                if (table.table == undefined)
+                    return error('Can only index tables')
+                if (key == undefined)
+                    return error('Invalid key, must be a number of string')
+
                 for (let i = 0; i < count; i++)
-                    table.set(index(this.stack.pop()!), this.stack.pop()!)
+                    table.table.set(key, value)
                 break
             }
 
             case OpCode.Store:
             {
-                const name = arg!.string!
+                const name = arg?.string ?? ''
                 if (this.locals.has(name))
-                    this.locals.set(name, this.stack.pop()!)
+                    this.locals.set(name, this.stack.pop() ?? nil)
                 else
-                    this.globals.set(name, this.stack.pop()!)
+                    this.globals.set(name, this.stack.pop() ?? nil)
                 break
             }
 
             case OpCode.Push:
             {
-                if (this.locals_stack.length > 0 && arg!.data_type! == DataType.Function)
-                    arg!.locals! = this.locals
-                this.stack.push(arg!)
+                if (this.locals_stack.length > 0 && arg?.locals != undefined)
+                    arg.locals = this.locals
+                this.stack.push(arg ?? nil)
                 break
             }
 
             case OpCode.Load:
             {
-                const name = arg!.string!
+                const name = arg?.string ?? ''
                 const local = this.locals.get(name)
                 if (local != undefined)
                 {
@@ -203,13 +267,13 @@ export class Lua
 
             case OpCode.Call:
             {
-                const count = this.stack.pop()!.number!
-                const func_var = this.stack.pop()!
+                const count = this.stack.pop()?.number ?? 0
+                const func_var = this.stack.pop() ?? nil
 
-                if (func_var.data_type == DataType.NativeFunction)
+                if (func_var.native_function != undefined)
                 {
                     const args = this.stack.splice(this.stack.length - count, count)
-                    this.stack.push(...func_var.native_function!(...args))
+                    this.stack.push(...func_var.native_function(...args))
                     break
                 }
 
@@ -217,14 +281,14 @@ export class Lua
                 this.call_stack.push(this.ip)
                 this.locals_stack.push(this.locals)
                 this.locals = func_var.locals ?? new Map()
-                this.ip = func_var.function_id!
+                this.ip = func_var.function_id ?? this.ip
                 break
             }
 
             case OpCode.ArgumentCount:
             {
-                const got = this.stack.pop()!.number!
-                const expected = arg!.number!
+                const got = this.stack.pop()?.number ?? 0
+                const expected = arg?.number ?? 0
                 if (got == expected)
                     break
                 return error(
@@ -236,7 +300,7 @@ export class Lua
             case OpCode.AssignSet:
             {
                 const value_count = this.stack.length - this.assign_stack_heigth
-                const expected = arg!.number!
+                const expected = arg?.number ?? 0
                 if (value_count == expected)
                     break
                 return error(
