@@ -1,4 +1,3 @@
-import {CompiledFunction} from "./opcode"
 
 export enum DataType {
     Nil,
@@ -17,15 +16,27 @@ export interface Variable {
     boolean?: boolean,
     number?: number,
     string?: string,
-    function?: CompiledFunction,
     native_function?: NativeFunction,
     table?: Map<string|number, Variable>,
+
+    function_id?: number,
+    locals?: Map<string, Variable>,
 }
 
-export interface Environment {
-    globals: Map<string, Variable>,
-    locals: Map<string, Variable>,
+export const nil: Variable = { data_type: DataType.Nil }
+
+export function make_boolean(boolean: boolean): Variable
+{
+    return { data_type: DataType.Boolean, boolean: boolean }
 }
 
-export const nil = { data_type: DataType.Nil }
+export function make_number(number: number): Variable
+{
+    return { data_type: DataType.Number, number: number }
+}
+
+export function make_string(string: string): Variable
+{
+    return { data_type: DataType.String, string: string }
+}
 

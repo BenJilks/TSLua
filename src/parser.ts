@@ -8,11 +8,12 @@ const ORDERS = [
     [TokenKind.Multiply, TokenKind.Division],
     [TokenKind.Addition, TokenKind.Subtract],
     [TokenKind.LessThen, TokenKind.GreaterThen],
+    [TokenKind.And, TokenKind.Or],
 ]
 
 function expect(stream: TokenStream, kind: TokenKind): Token | undefined
 {
-    const token = stream.peek();
+    const token = stream.peek()
     if (token.kind != kind)
         return undefined
     return stream.next()
@@ -20,11 +21,15 @@ function expect(stream: TokenStream, kind: TokenKind): Token | undefined
 
 function parse_table(stream: TokenStream): Value | undefined
 {
+    const squigly_open = expect(stream, TokenKind.SquiglyOpen)
+    if (squigly_open == undefined)
+        return undefined
+
     const elements: Map<string|number, Expression> = new Map()
     let current_numeric_key = 1
     while (stream.peek().kind != TokenKind.SquiglyClose)
     {
-        let key: string | number;
+        let key: string | number
 
         if (stream.peek(1).kind == TokenKind.Identifier &&
             stream.peek(2).kind == TokenKind.Assign)
@@ -52,50 +57,77 @@ function parse_table(stream: TokenStream): Value | undefined
 
     return {
         kind: ValueKind.TableLiteral,
+        token: squigly_open,
         table: elements,
     }
 }
 
 function parse_value(stream: TokenStream): Value | undefined
 {
-    const token = stream.next();
+    const token = stream.peek()
     switch (token.kind)
     {
-        case TokenKind.NumberLiteral:
-            return { kind: ValueKind.NumberLiteral, number: parseFloat(token.data) } 
+        case TokenKind.NumberLiteral: 
+            return { kind: ValueKind.NumberLiteral, token: stream.next(), number: parseFloat(token.data) } 
         case TokenKind.BooleanLiteral:
-            return { kind: ValueKind.BooleanLiteral, boolean: token.data == "true" } 
+            stream.next()
+            return { kind: ValueKind.BooleanLiteral, token: stream.next(), boolean: token.data == 'true' } 
         case TokenKind.StringLiteral:
-            return { kind: ValueKind.StringLiteral, string: token.data } 
+            stream.next()
+            return { kind: ValueKind.StringLiteral, token: stream.next(), string: token.data } 
         case TokenKind.NilLiteral:
-            return { kind: ValueKind.NilLiteral } 
+            stream.next()
+            return { kind: ValueKind.NilLiteral, token: stream.next() } 
         case TokenKind.Identifier:
-            return { kind: ValueKind.Variable, identifier: token.data }
+            stream.next()
+            return { kind: ValueKind.Variable, token: stream.next(), identifier: token.data }
         
         case TokenKind.SquiglyOpen:
             return parse_table(stream)
-        case TokenKind.Function:
-            return parse_function_value(stream)
+        case TokenKind.Function: 
+            return parse_function_value(stream.next(), stream)
 
         default:
             return undefined
     }
 }
 
+function parse_unary_operation(stream: TokenStream): Expression | undefined
+{
+    const not = expect(stream, TokenKind.Not)
+    if (not == undefined)
+        return undefined
+
+    const expression = parse_expression(stream)
+    if (expression == undefined)
+        return undefined
+
+    return {
+        kind: ExpressionKind.Not,
+        token: not,
+        lhs: expression,
+    }
+}
+
 function parse_expression_value(stream: TokenStream): Expression | undefined
 {
-    let value = parse_value(stream)
+    if (stream.peek().kind == TokenKind.Not)
+        return parse_unary_operation(stream)
+
+    const value = parse_value(stream)
     if (value == undefined)
         return undefined
 
     let result: Expression = {
         kind: ExpressionKind.Value,
+        token: value.token,
         value: value,
     }
 
     while ([TokenKind.OpenBrace, TokenKind.OpenSquare, TokenKind.Dot].includes(stream.peek().kind))
     {
-        if (expect(stream, TokenKind.OpenBrace) != undefined)
+        const open_brace = expect(stream, TokenKind.OpenBrace)
+        if (open_brace != undefined)
         {
             const args: Expression[] = []
             while (stream.peek().kind != TokenKind.CloseBrace)
@@ -114,12 +146,14 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
 
             result = { 
                 kind: ExpressionKind.Call,
+                token: open_brace,
                 expression: result,
                 arguments: args,
             }
         }
 
-        if (expect(stream, TokenKind.OpenSquare) != undefined)
+        const open_square = expect(stream, TokenKind.OpenSquare)
+        if (open_square != undefined)
         {
             const index = parse_expression(stream)
             if (index == undefined)
@@ -130,12 +164,14 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
 
             result = { 
                 kind: ExpressionKind.Index,
+                token: open_square,
                 expression: result,
                 index: index,
             }
         }
 
-        if (expect(stream, TokenKind.Dot) != undefined)
+        const dot = expect(stream, TokenKind.OpenSquare)
+        if (dot != undefined)
         {
             const index = expect(stream, TokenKind.Identifier)
             if (index == undefined)
@@ -144,12 +180,15 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
             result = { 
                 kind: ExpressionKind.Index,
                 expression: result,
+                token: dot,
                 index: {
                     kind: ExpressionKind.Value,
+                    token: index,
                     value: {
                         kind: ValueKind.StringLiteral,
+                        token: index,
                         string: index.data,
-                    }
+                    },
                 },
             }
         }
@@ -169,6 +208,8 @@ function operation_type_to_expression_kind(
         case TokenKind.Division: return ExpressionKind.Division
         case TokenKind.LessThen: return ExpressionKind.LessThen
         case TokenKind.GreaterThen: return ExpressionKind.GreaterThen
+        case TokenKind.And: return ExpressionKind.And
+        case TokenKind.Or: return ExpressionKind.Or
         default:
             throw new Error()
     }
@@ -189,6 +230,7 @@ function parse_operation(stream: TokenStream,
         const expression_kind = operation_type_to_expression_kind(operation_type.kind)
         result = {
             kind: expression_kind,
+            token: operation_type,
             lhs: result,
             rhs: rhs,
         }
@@ -200,18 +242,31 @@ function parse_operation(stream: TokenStream,
         return parse_operation(stream, result, order + 1)
 }
 
-function parse_expression(stream: TokenStream, order: number = 0): Expression | undefined
+function parse_expression(stream: TokenStream, order = 0): Expression | undefined
 {
-    const lhs = parse_expression_value(stream);
+    const lhs = parse_expression_value(stream)
     if (lhs == undefined)
         return undefined
 
     return parse_operation(stream, lhs, order)
 }
 
+function parse_local_statement(local: Token, values: Expression[]): Statement
+{
+    return { 
+        kind: StatementKind.Local,
+        local: {
+            token: local,
+            names: values
+                .filter(x => x?.value?.identifier != undefined)
+                .map(x => x?.value?.token!)
+        },
+    }
+}
+
 function parse_assign_or_expression(stream: TokenStream): Statement | undefined
 {
-    const is_local = expect(stream, TokenKind.Local) != undefined
+    const local = expect(stream, TokenKind.Local)
     const lhs: Expression[] = []
     while (lhs.length == 0 || expect(stream, TokenKind.Comma) != undefined)
     {
@@ -221,8 +276,14 @@ function parse_assign_or_expression(stream: TokenStream): Statement | undefined
         lhs.push(lvalue)
     }
 
-    if (expect(stream, TokenKind.Assign) == undefined)
-        return { kind: StatementKind.Expression, expression: lhs[0] }
+    const assign = expect(stream, TokenKind.Assign)
+    if (assign == undefined)
+    {
+        if (local != undefined)
+            return parse_local_statement(local, lhs)
+        else
+            return { kind: StatementKind.Expression, expression: lhs[0] }
+    }
 
     const rhs: Expression[] = []
     while (rhs.length == 0 || expect(stream, TokenKind.Comma) != undefined)
@@ -236,16 +297,18 @@ function parse_assign_or_expression(stream: TokenStream): Statement | undefined
     return {
         kind: StatementKind.Assignment,
         assignment: {
-            local: is_local,
+            local: local != undefined,
             lhs: lhs.reverse(),
             rhs: rhs,
+            token: assign,
         },
     }
 }
 
 function parse_return(stream: TokenStream): Statement | undefined
 {
-    if (expect(stream, TokenKind.Return) == undefined)
+    const ret = expect(stream, TokenKind.Return)
+    if (ret == undefined)
         return undefined
 
     const values: Expression[] = []
@@ -253,7 +316,12 @@ function parse_return(stream: TokenStream): Statement | undefined
     {
         const value = parse_expression(stream)
         if (value == undefined)
-            return undefined
+        {
+            if (values.length == 0)
+                break
+            else
+                return undefined
+        }
         values.push(value)
     }
 
@@ -261,9 +329,11 @@ function parse_return(stream: TokenStream): Statement | undefined
     {
         values.push({
             kind: ExpressionKind.Value,
+            token: ret,
             value: {
                 kind: ValueKind.NilLiteral,
-            }
+                token: ret,
+            },
         })
     }
 
@@ -271,13 +341,15 @@ function parse_return(stream: TokenStream): Statement | undefined
         kind: StatementKind.Return,
         return: {
             values: values,
+            token: ret,
         },
     }
 }
 
 function parse_if(stream: TokenStream): Statement | undefined
 {
-    if (expect(stream, TokenKind.If) == undefined)
+    const if_token = expect(stream, TokenKind.If)
+    if (if_token == undefined)
         return undefined
 
     const condition = parse_expression(stream)
@@ -298,13 +370,15 @@ function parse_if(stream: TokenStream): Statement | undefined
             condition: condition,
             body: body,
             else_body: else_body,
-        }
+            token: if_token,
+        },
     }
 }
 
 function parse_while(stream: TokenStream): Statement | undefined
 {
-    if (expect(stream, TokenKind.While) == undefined)
+    const while_token = expect(stream, TokenKind.While)
+    if (while_token == undefined)
         return undefined
 
     const condition = parse_expression(stream)
@@ -320,22 +394,24 @@ function parse_while(stream: TokenStream): Statement | undefined
         while: {
             condition: condition,
             body: body,
-        }
+            token: while_token,
+        },
     }
 }
 
 function parse_for(stream: TokenStream): Statement | undefined
 {
-    if (expect(stream, TokenKind.For) == undefined)
+    const for_token = expect(stream, TokenKind.For)
+    if (for_token == undefined)
         return undefined
 
-    const items: string[] = []
+    const items: Token[] = []
     while (items.length == 0 || expect(stream, TokenKind.Comma) != undefined)
     {
         const item = expect(stream, TokenKind.Identifier)
         if (item == undefined)
             return undefined
-        items.push(item.data)
+        items.push(item)
     }
 
     if (expect(stream, TokenKind.In) == undefined)
@@ -355,23 +431,24 @@ function parse_for(stream: TokenStream): Statement | undefined
             items: items,
             itorator: itorator,
             body: body,
-        }
+            token: for_token,
+        },
     }
 }
 
-function parse_function_params(stream: TokenStream): string[] | undefined
+function parse_function_params(stream: TokenStream): Token[] | undefined
 {
     if (expect(stream, TokenKind.OpenBrace) == undefined)
         return undefined
 
-    const params: string[] = []
+    const params: Token[] = []
     while (true)
     {
         const param = expect(stream, TokenKind.Identifier)
         if (param == undefined)
             break
 
-        params.push(param.data)
+        params.push(param)
         if (expect(stream, TokenKind.Comma) == undefined)
             break
     }
@@ -382,7 +459,7 @@ function parse_function_params(stream: TokenStream): string[] | undefined
     return params
 }
 
-function parse_function_value(stream: TokenStream): Value | undefined
+function parse_function_value(function_token: Token, stream: TokenStream): Value | undefined
 {
     const params = parse_function_params(stream)
     if (params == undefined)
@@ -391,10 +468,11 @@ function parse_function_value(stream: TokenStream): Value | undefined
     const body = parse(stream)
     return {
         kind: ValueKind.Function,
+        token: function_token,
         function: {
             parameters: params,
             body: body,
-        }
+        },
     }
 }
 
@@ -407,32 +485,36 @@ function parse_function(stream: TokenStream): Statement | undefined
     if (name == undefined)
         return undefined
     
-    const function_value = parse_function_value(stream)
+    const function_value = parse_function_value(name, stream)
     if (function_value == undefined)
         return undefined
 
     return {
         kind: StatementKind.Assignment,
         assignment: {
+            token: name,
             local: false,
             lhs: [{
                 kind: ExpressionKind.Value,
+                token: name,
                 value: {
                     kind: ValueKind.Variable,
+                    token: name,
                     identifier: name.data,
                 },
             }],
             rhs: [{
                 kind: ExpressionKind.Value,
+                token: name,
                 value: function_value,
             }],
-        }
+        },
     }
 }
 
 function parse_statement(stream: TokenStream): Statement | undefined
 {
-    const token = stream.peek();
+    const token = stream.peek()
     switch (token.kind)
     {
         case TokenKind.Identifier:
@@ -460,7 +542,7 @@ function parse_statement(stream: TokenStream): Statement | undefined
 
 export function parse(stream: TokenStream): Chunk
 {
-    let chunk: Chunk = { statements: [] }
+    const chunk: Chunk = { statements: [] }
 
     while (true)
     {

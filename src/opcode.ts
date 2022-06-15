@@ -1,4 +1,5 @@
-import {Variable} from "./runtime"
+import { Variable } from './runtime'
+import { Debug } from './lexer'
 
 export enum OpCode {
     Load,
@@ -18,6 +19,9 @@ export enum OpCode {
 
     LessThen,
     GreaterThen,
+    And,
+    Or,
+    Not,
     IsNil,
 
     MakeLocal,
@@ -29,6 +33,7 @@ export enum OpCode {
     // NOTE: Debug opcode, not needed for operation.
     AssignPush,
     AssignSet,
+    ArgumentCount,
 }
 
 export function op_code_name(op_code: OpCode): string
@@ -36,7 +41,7 @@ export function op_code_name(op_code: OpCode): string
     switch (op_code)
     {
         case OpCode.Load: return 'Load'
-        case OpCode.Store: return 'StoreGlobal'
+        case OpCode.Store: return 'Store'
         case OpCode.Push: return 'Push'
         case OpCode.Pop: return 'Pop'
         case OpCode.Dup: return 'Dup'
@@ -49,26 +54,25 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Divide: return 'Divide'
         case OpCode.LessThen: return 'LessThen'
         case OpCode.GreaterThen: return 'GreaterThen'
-        case OpCode.IsNil: return "IsNil"
+        case OpCode.Not: return 'Not'
+        case OpCode.IsNil: return 'IsNil'
         case OpCode.MakeLocal: return 'MakeLocal'
         case OpCode.Call: return 'Call'
         case OpCode.Return: return 'Return'
         case OpCode.Jump: return 'Jump'
         case OpCode.JumpIfNot: return 'JumpIfNot'
 
-        case OpCode.AssignPush: return 'AssignPush'
-        case OpCode.AssignSet: return 'AssignSet'
+        case OpCode.AssignPush: return 'AssignPush[Debug]'
+        case OpCode.AssignSet: return 'AssignSet[Debug]'
+        case OpCode.ArgumentCount: return 'ArgumentCount[Debug]'
+        default:
+            throw new Error()
     }
 }
 
 export interface Op {
     code: OpCode,
     arg?: Variable,
-}
-
-export interface CompiledFunction {
-    parameters: string[],
-    locals: Map<string, Variable>,
-    ops: Op[]
+    debug: Debug,
 }
 

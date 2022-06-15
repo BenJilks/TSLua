@@ -2,13 +2,23 @@
   "name": "tslua",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "files": [
+    "index.ts",
+    "src/ast.ts",
+    "src/compiler.ts",
+    "src/lexer.ts",
+    "src/lib.ts",
+    "src/link.ts",
+    "src/lua.ts",
+    "src/opcode.ts",
+    "src/parser.ts",
+    "src/runtime.ts"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.28.0",
+    "eslint": "^8.17.0",
     "typescript": "^4.7.3"
   }
 }
