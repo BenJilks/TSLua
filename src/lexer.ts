@@ -56,6 +56,51 @@ export enum TokenKind {
     Local,
 }
 
+export function token_kind_to_string(kind: TokenKind)
+{
+    switch(kind)
+    {
+        case TokenKind.EOF: return 'EOF'
+        case TokenKind.Identifier: return 'Identifier'
+        case TokenKind.StringLiteral: return 'StringLiteral'
+        case TokenKind.BooleanLiteral: return 'BooleanLiteral'
+        case TokenKind.NumberLiteral: return 'NumberLiteral'
+        case TokenKind.NilLiteral: return 'nil'
+        case TokenKind.OpenBrace: return '('
+        case TokenKind.CloseBrace: return ')'
+        case TokenKind.OpenSquare: return '['
+        case TokenKind.CloseSquare: return ']'
+        case TokenKind.SquiglyOpen: return '{'
+        case TokenKind.SquiglyClose: return '}'
+        case TokenKind.Addition: return '+'
+        case TokenKind.Subtract: return '-'
+        case TokenKind.Multiply: return '*'
+        case TokenKind.Division: return '/'
+        case TokenKind.LessThen: return '-'
+        case TokenKind.GreaterThen: return '>'
+        case TokenKind.And: return 'and'
+        case TokenKind.Or: return 'or'
+        case TokenKind.Not: return 'not'
+        case TokenKind.Assign: return '='
+        case TokenKind.Semicolon: return ';'
+        case TokenKind.Comma: return ','
+        case TokenKind.Dot: return '.'
+        case TokenKind.Function: return 'function'
+        case TokenKind.If: return 'if'
+        case TokenKind.While: return 'while'
+        case TokenKind.For: return 'for'
+        case TokenKind.In: return 'in'
+        case TokenKind.Do: return 'do'
+        case TokenKind.Then: return 'then'
+        case TokenKind.ElseIf: return 'elseif'
+        case TokenKind.Else: return 'else'
+        case TokenKind.End: return 'end'
+        case TokenKind.Return: return 'return'
+        case TokenKind.Break: return 'break'
+        case TokenKind.Local: return 'local'
+    }
+}
+
 export interface Debug {
     line: number
     column: number

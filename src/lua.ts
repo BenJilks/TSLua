@@ -47,18 +47,24 @@ export class Lua
     private call_stack: number[]
     private locals: Map<string, Variable>
 
+    private error: Error | undefined
     private assign_stack_heigth: number
 
     constructor(script: string,
                 globals?: Map<string, Variable>,
                 debug?: boolean)
     {
-        const lexer = new Lexer()
-        const ast = parse(lexer.feed(script))
-        this.program = compile(ast)
         this.globals = globals ?? std.std_lib()
         this.debug = debug ?? false
+        this.error = undefined
         this.reset()
+
+        const lexer = new Lexer()
+        const ast = parse(lexer.feed(script))
+        if (ast instanceof Error)
+            this.error = ast
+        else
+            this.program = compile(ast)
     }
 
     global(name: string): Variable | undefined
@@ -95,6 +101,9 @@ export class Lua
 
     run(): Error | void
     {
+        if (this.error != undefined)
+            return this.error
+
         let step_count = 0
         while (true)
         {
@@ -110,8 +119,25 @@ export class Lua
         }
     }
 
+    private operation(op: (x: number, y: number) => number)
+    {
+        const x = this.stack.pop()?.number ?? 0
+        const y = this.stack.pop()?.number ?? 0
+        this.stack.push(make_number(op(x, y)))
+    }
+
+    private compair(op: (x: number, y: number) => boolean)
+    {
+        const x = this.stack.pop()?.number ?? 0
+        const y = this.stack.pop()?.number ?? 0
+        this.stack.push(make_boolean(op(x, y)))
+    }
+
     step(): boolean | Error
     {
+        if (this.error != undefined)
+            return this.error
+
         if (this.ip >= this.program.length)
             return false
 
@@ -123,20 +149,6 @@ export class Lua
         function error(message: string)
         {
             return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
-        }
-
-        function operation(op: (x: number, y: number) => number)
-        {
-            const x = this.stack.pop()?.number ?? 0
-            const y = this.stack.pop()?.number ?? 0
-            this.stack.push(make_number(op(x, y)))
-        }
-
-        function compair(op: (x: number, y: number) => boolean)
-        {
-            const x = this.stack.pop()?.number ?? 0
-            const y = this.stack.pop()?.number ?? 0
-            this.stack.push(make_boolean(op(x, y)))
         }
 
         switch(code)
@@ -174,12 +186,12 @@ export class Lua
                 break
             }
 
-            case OpCode.Add: operation((x, y) => x + y); break
-            case OpCode.Subtract: operation((x, y) => x - y); break
-            case OpCode.Multiply: operation((x, y) => x * y); break
-            case OpCode.Divide: operation((x, y) => x / y); break
-            case OpCode.LessThen: compair((x, y) => x < y); break
-            case OpCode.GreaterThen: compair((x, y) => x > y); break
+            case OpCode.Add: this.operation((x, y) => x + y); break
+            case OpCode.Subtract: this.operation((x, y) => x - y); break
+            case OpCode.Multiply: this.operation((x, y) => x * y); break
+            case OpCode.Divide: this.operation((x, y) => x / y); break
+            case OpCode.LessThen: this.compair((x, y) => x < y); break
+            case OpCode.GreaterThen: this.compair((x, y) => x > y); break
 
             case OpCode.And:
             {
@@ -214,16 +226,18 @@ export class Lua
             {
                 const count = arg?.number ?? 1
                 const table = this.stack[this.stack.length - count*2 - 1] ?? nil
-                const key = index(this.stack.pop())
-                const value = this.stack.pop() ?? nil
-
                 if (table.table == undefined)
                     return error('Can only index tables')
-                if (key == undefined)
-                    return error('Invalid key, must be a number of string')
 
                 for (let i = 0; i < count; i++)
+                {
+                    const key = index(this.stack.pop())
+                    const value = this.stack.pop() ?? nil
+                    if (key == undefined)
+                        return error('Invalid key, must be a number of string')
+
                     table.table.set(key, value)
+                }
                 break
             }
 
@@ -239,7 +253,7 @@ export class Lua
 
             case OpCode.Push:
             {
-                if (this.locals_stack.length > 0 && arg?.locals != undefined)
+                if (this.locals_stack.length > 0 && arg?.data_type == DataType.Function)
                     arg.locals = this.locals
                 this.stack.push(arg ?? nil)
                 break

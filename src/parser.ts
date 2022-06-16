@@ -2,7 +2,7 @@ import { Chunk } from './ast'
 import { Expression, ExpressionKind } from './ast'
 import { Statement, StatementKind } from './ast'
 import { Value, ValueKind } from './ast'
-import { Token, TokenKind, TokenStream } from './lexer'
+import { Token, TokenKind, TokenStream, token_kind_to_string } from './lexer'
 
 const ORDERS = [
     [TokenKind.Multiply, TokenKind.Division],
@@ -11,54 +11,64 @@ const ORDERS = [
     [TokenKind.And, TokenKind.Or],
 ]
 
-function expect(stream: TokenStream, kind: TokenKind): Token | undefined
+function error(token: Token, message: string): Error
+{
+    return new Error(
+        `${ token.debug.line }:${ token.debug.column }: ${ message }`)
+}
+
+function expect(stream: TokenStream, kind: TokenKind): Token | Error
 {
     const token = stream.peek()
     if (token.kind != kind)
-        return undefined
+        return error(token, `expected '${ token_kind_to_string(kind) }', got '${ token_kind_to_string(token.kind) }' instead`)
+
     return stream.next()
 }
 
-function parse_table(stream: TokenStream): Value | undefined
+function parse_table(stream: TokenStream): Value | Error
 {
     const squigly_open = expect(stream, TokenKind.SquiglyOpen)
-    if (squigly_open == undefined)
-        return undefined
+    if (squigly_open instanceof Error)
+        return squigly_open
 
     const elements: Map<Token, Expression> = new Map()
     let current_numeric_key = 1
     while (stream.peek().kind != TokenKind.SquiglyClose)
     {
         const element = parse_expression(stream)
-        if (element == undefined)
-            return undefined
+        if (element instanceof Error)
+            return element
 
-        if (expect(stream, TokenKind.Assign) != undefined)
+        if (!(expect(stream, TokenKind.Assign) instanceof Error))
         {
             const value = parse_expression(stream)
-            if (value == undefined)
-                return undefined
+            if (value instanceof Error)
+                return value
 
             if (element.kind != ExpressionKind.Value)
                 throw new Error()
             elements.set(element.token, value)
-            continue
+        }
+        else
+        {
+            const key = {
+                kind: TokenKind.NumberLiteral,
+                data: current_numeric_key.toString(),
+                debug: element.token.debug,
+            }
+
+            current_numeric_key += 1
+            elements.set(key, element)
         }
 
-        const key = {
-            kind: TokenKind.NumberLiteral,
-            data: current_numeric_key.toString(),
-            debug: element.token.debug,
-        }
-
-        current_numeric_key += 1
-        elements.set(key, element)
-        if (expect(stream, TokenKind.Comma) == undefined)
+        if (expect(stream, TokenKind.Comma) instanceof Error)
             break
     }
 
-    if (expect(stream, TokenKind.SquiglyClose) == undefined)
-        return undefined
+    const close_squigly = expect(stream, TokenKind.SquiglyClose)
+    if (close_squigly instanceof Error)
+        return close_squigly
 
     return {
         kind: ValueKind.TableLiteral,
@@ -67,7 +77,7 @@ function parse_table(stream: TokenStream): Value | undefined
     }
 }
 
-function parse_value(stream: TokenStream): Value | undefined
+function parse_value(stream: TokenStream): Value | Error
 {
     const token = stream.peek()
     switch (token.kind)
@@ -89,19 +99,19 @@ function parse_value(stream: TokenStream): Value | undefined
             return parse_function_value(stream.next(), stream)
 
         default:
-            return undefined
+            return error(token, `Expected value, got ${ token_kind_to_string(token.kind) } instead`)
     }
 }
 
-function parse_unary_operation(stream: TokenStream): Expression | undefined
+function parse_unary_operation(stream: TokenStream): Expression | Error
 {
     const not = expect(stream, TokenKind.Not)
-    if (not == undefined)
-        return undefined
+    if (not instanceof Error)
+        return not
 
     const expression = parse_expression(stream)
-    if (expression == undefined)
-        return undefined
+    if (expression instanceof Error)
+        return expression
 
     return {
         kind: ExpressionKind.Not,
@@ -110,14 +120,14 @@ function parse_unary_operation(stream: TokenStream): Expression | undefined
     }
 }
 
-function parse_expression_value(stream: TokenStream): Expression | undefined
+function parse_expression_value(stream: TokenStream): Expression | Error
 {
     if (stream.peek().kind == TokenKind.Not)
         return parse_unary_operation(stream)
 
     const value = parse_value(stream)
-    if (value == undefined)
-        return undefined
+    if (value instanceof Error)
+        return value
 
     let result: Expression = {
         kind: ExpressionKind.Value,
@@ -128,22 +138,23 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
     while ([TokenKind.OpenBrace, TokenKind.OpenSquare, TokenKind.Dot].includes(stream.peek().kind))
     {
         const open_brace = expect(stream, TokenKind.OpenBrace)
-        if (open_brace != undefined)
+        if (!(open_brace instanceof Error))
         {
             const args: Expression[] = []
             while (stream.peek().kind != TokenKind.CloseBrace)
             {
                 const argument = parse_expression(stream)
-                if (argument == undefined)
-                    return undefined
+                if (argument instanceof Error)
+                    break
 
                 args.push(argument)
-                if (expect(stream, TokenKind.Comma) == undefined)
+                if (expect(stream, TokenKind.Comma) instanceof Error)
                     break
             }
-
-            if (expect(stream, TokenKind.CloseBrace) == undefined)
-                return undefined
+    
+            const close_brace = expect(stream, TokenKind.CloseBrace) 
+            if (close_brace instanceof Error)
+                return close_brace
 
             result = { 
                 kind: ExpressionKind.Call,
@@ -154,14 +165,15 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
         }
 
         const open_square = expect(stream, TokenKind.OpenSquare)
-        if (open_square != undefined)
+        if (!(open_square instanceof Error))
         {
             const index = parse_expression(stream)
-            if (index == undefined)
-                return undefined
+            if (index instanceof Error)
+                return index
 
-            if (expect(stream, TokenKind.CloseSquare) == undefined)
-                return undefined
+            const close_square = expect(stream, TokenKind.CloseSquare)
+            if (close_square instanceof Error)
+                return close_square
 
             result = { 
                 kind: ExpressionKind.Index,
@@ -172,11 +184,11 @@ function parse_expression_value(stream: TokenStream): Expression | undefined
         }
 
         const dot = expect(stream, TokenKind.Dot)
-        if (dot != undefined)
+        if (!(dot instanceof Error))
         {
             const index = expect(stream, TokenKind.Identifier)
-            if (index == undefined)
-                return undefined
+            if (index instanceof Error)
+                return index
 
             result = { 
                 kind: ExpressionKind.Index,
@@ -218,15 +230,15 @@ function operation_type_to_expression_kind(
 
 function parse_operation(stream: TokenStream,
                          lhs: Expression,
-                         order: number): Expression | undefined
+                         order: number): Expression | Error
 {
     let result = lhs
     while (ORDERS[order].includes(stream.peek().kind))
     {
         const operation_type = stream.next()
         const rhs = parse_expression(stream, order)
-        if (rhs == undefined)
-            return undefined
+        if (rhs instanceof Error)
+            return rhs
 
         const expression_kind = operation_type_to_expression_kind(operation_type.kind)
         result = {
@@ -243,11 +255,11 @@ function parse_operation(stream: TokenStream,
         return parse_operation(stream, result, order + 1)
 }
 
-function parse_expression(stream: TokenStream, order = 0): Expression | undefined
+function parse_expression(stream: TokenStream, order = 0): Expression | Error
 {
     const lhs = parse_expression_value(stream)
-    if (lhs == undefined)
-        return undefined
+    if (lhs instanceof Error)
+        return lhs
 
     return parse_operation(stream, lhs, order)
 }
@@ -270,40 +282,40 @@ function parse_local_statement(local: Token, values: Expression[]): Statement
     }
 }
 
-function parse_assign_or_expression(stream: TokenStream): Statement | undefined
+function parse_assign_or_expression(stream: TokenStream): Statement | Error
 {
     const local = expect(stream, TokenKind.Local)
     const lhs: Expression[] = []
-    while (lhs.length == 0 || expect(stream, TokenKind.Comma) != undefined)
+    while (lhs.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
     {
         const lvalue = parse_expression(stream)
-        if (lvalue == undefined)
-            return undefined
+        if (lvalue instanceof Error)
+            return lvalue
         lhs.push(lvalue)
     }
 
     const assign = expect(stream, TokenKind.Assign)
-    if (assign == undefined)
+    if (assign instanceof Error)
     {
-        if (local != undefined)
+        if (!(local instanceof Error))
             return parse_local_statement(local, lhs)
         else
             return { kind: StatementKind.Expression, expression: lhs[0] }
     }
 
     const rhs: Expression[] = []
-    while (rhs.length == 0 || expect(stream, TokenKind.Comma) != undefined)
+    while (rhs.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
     {
         const rvalue = parse_expression(stream)
-        if (rvalue == undefined)
-            return undefined
+        if (rvalue instanceof Error)
+            return rvalue
         rhs.push(rvalue)
     }
 
     return {
         kind: StatementKind.Assignment,
         assignment: {
-            local: local != undefined,
+            local: !(local instanceof Error),
             lhs: lhs.reverse(),
             rhs: rhs,
             token: assign,
@@ -311,22 +323,22 @@ function parse_assign_or_expression(stream: TokenStream): Statement | undefined
     }
 }
 
-function parse_return(stream: TokenStream): Statement | undefined
+function parse_return(stream: TokenStream): Statement | Error
 {
     const ret = expect(stream, TokenKind.Return)
-    if (ret == undefined)
-        return undefined
+    if (ret instanceof Error)
+        return ret
 
     const values: Expression[] = []
-    while (values.length == 0 || expect(stream, TokenKind.Comma) != undefined)
+    while (values.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
     {
         const value = parse_expression(stream)
-        if (value == undefined)
+        if (value instanceof Error)
         {
             if (values.length == 0)
                 break
             else
-                return undefined
+                return value
         }
         values.push(value)
     }
@@ -352,23 +364,32 @@ function parse_return(stream: TokenStream): Statement | undefined
     }
 }
 
-function parse_if(stream: TokenStream): Statement | undefined
+function parse_if(stream: TokenStream): Statement | Error
 {
     const if_token = expect(stream, TokenKind.If)
-    if (if_token == undefined)
-        return undefined
+    if (if_token instanceof Error)
+        return if_token
 
     const condition = parse_expression(stream)
-    if (condition == undefined)
-        return undefined
+    if (condition instanceof Error)
+        return condition
 
-    if (expect(stream, TokenKind.Then) == undefined)
-        return undefined
+    const then = expect(stream, TokenKind.Then)
+    if (then instanceof Error)
+        return then
     
     const body = parse(stream)
+    if (body instanceof Error)
+        return body
+
     let else_body: Chunk | undefined = undefined
-    if (expect(stream, TokenKind.Else) != undefined)
-        else_body = parse(stream)
+    if (!(expect(stream, TokenKind.Else) instanceof Error))
+    {
+        const chunk = parse(stream)
+        if (chunk instanceof Error)
+            return chunk
+        else_body = chunk
+    }
     
     return {
         kind: StatementKind.If,
@@ -381,20 +402,24 @@ function parse_if(stream: TokenStream): Statement | undefined
     }
 }
 
-function parse_while(stream: TokenStream): Statement | undefined
+function parse_while(stream: TokenStream): Statement | Error
 {
     const while_token = expect(stream, TokenKind.While)
-    if (while_token == undefined)
-        return undefined
+    if (while_token instanceof Error)
+        return while_token
 
     const condition = parse_expression(stream)
-    if (condition == undefined)
-        return undefined
+    if (condition instanceof Error)
+        return condition
 
-    if (expect(stream, TokenKind.Do) == undefined)
-        return undefined
+    const do_token = expect(stream, TokenKind.Do)
+    if (do_token instanceof Error)
+        return do_token
     
     const body = parse(stream)
+    if (body instanceof Error)
+        return body
+
     return {
         kind: StatementKind.While,
         while: {
@@ -405,32 +430,37 @@ function parse_while(stream: TokenStream): Statement | undefined
     }
 }
 
-function parse_for(stream: TokenStream): Statement | undefined
+function parse_for(stream: TokenStream): Statement | Error
 {
     const for_token = expect(stream, TokenKind.For)
-    if (for_token == undefined)
-        return undefined
+    if (for_token instanceof Error)
+        return for_token
 
     const items: Token[] = []
-    while (items.length == 0 || expect(stream, TokenKind.Comma) != undefined)
+    while (items.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
     {
         const item = expect(stream, TokenKind.Identifier)
-        if (item == undefined)
-            return undefined
+        if (item instanceof Error)
+            return item
         items.push(item)
     }
 
-    if (expect(stream, TokenKind.In) == undefined)
-        return undefined
+    const in_token = expect(stream, TokenKind.In)
+    if (in_token instanceof Error)
+        return in_token
 
     const itorator = parse_expression(stream)
-    if (itorator == undefined)
-        return undefined
+    if (itorator instanceof Error)
+        return itorator
 
-    if (expect(stream, TokenKind.Do) == undefined)
-        return undefined
+    const do_token = expect(stream, TokenKind.Do)
+    if (do_token instanceof Error)
+        return do_token
 
     const body = parse(stream)
+    if (body instanceof Error)
+        return body
+
     return {
         kind: StatementKind.For,
         for: {
@@ -442,36 +472,41 @@ function parse_for(stream: TokenStream): Statement | undefined
     }
 }
 
-function parse_function_params(stream: TokenStream): Token[] | undefined
+function parse_function_params(stream: TokenStream): Token[] | Error
 {
-    if (expect(stream, TokenKind.OpenBrace) == undefined)
-        return undefined
+    const open_brace = expect(stream, TokenKind.OpenBrace)
+    if (open_brace instanceof Error)
+        return open_brace
 
     const params: Token[] = []
-    while (true)
+    while (stream.peek().kind != TokenKind.CloseBrace)
     {
         const param = expect(stream, TokenKind.Identifier)
-        if (param == undefined)
+        if (param instanceof Error)
             break
 
         params.push(param)
-        if (expect(stream, TokenKind.Comma) == undefined)
+        if (expect(stream, TokenKind.Comma) instanceof Error)
             break
     }
 
-    if (expect(stream, TokenKind.CloseBrace) == undefined)
-        return undefined
+    const close_brace = expect(stream, TokenKind.CloseBrace)
+    if (close_brace instanceof Error)
+        return close_brace
 
     return params
 }
 
-function parse_function_value(function_token: Token, stream: TokenStream): Value | undefined
+function parse_function_value(function_token: Token, stream: TokenStream): Value | Error
 {
     const params = parse_function_params(stream)
-    if (params == undefined)
-        return undefined
+    if (params instanceof Error)
+        return params
 
     const body = parse(stream)
+    if (body instanceof Error)
+        return body
+
     return {
         kind: ValueKind.Function,
         token: function_token,
@@ -482,18 +517,19 @@ function parse_function_value(function_token: Token, stream: TokenStream): Value
     }
 }
 
-function parse_function(stream: TokenStream): Statement | undefined
+function parse_function(stream: TokenStream): Statement | Error
 {
-    if (expect(stream, TokenKind.Function) == undefined)
-        return undefined
+    const function_token = expect(stream, TokenKind.Function)
+    if (function_token instanceof Error)
+        return function_token
 
     const name = expect(stream, TokenKind.Identifier)
-    if (name == undefined)
-        return undefined
+    if (name instanceof Error)
+        return name
     
     const function_value = parse_function_value(name, stream)
-    if (function_value == undefined)
-        return undefined
+    if (function_value instanceof Error)
+        return function_value
 
     return {
         kind: StatementKind.Assignment,
@@ -518,7 +554,7 @@ function parse_function(stream: TokenStream): Statement | undefined
     }
 }
 
-function parse_statement(stream: TokenStream): Statement | undefined
+function parse_statement(stream: TokenStream): Statement | Error | undefined
 {
     const token = stream.peek()
     switch (token.kind)
@@ -546,7 +582,7 @@ function parse_statement(stream: TokenStream): Statement | undefined
     return undefined
 }
 
-export function parse(stream: TokenStream): Chunk
+export function parse(stream: TokenStream): Chunk | Error
 {
     const chunk: Chunk = { statements: [] }
 
@@ -555,6 +591,8 @@ export function parse(stream: TokenStream): Chunk
         const statement = parse_statement(stream)
         if (statement == undefined)
             break
+        if (statement instanceof Error)
+            return statement
 
         chunk.statements.push(statement)
     }

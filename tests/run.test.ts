@@ -3,7 +3,7 @@ import { Lua, DataType } from '../index'
 test('Can run a basic script', () =>
 {
     const lua = new Lua('a = 1')
-    lua.run()
+    expect(lua.run()).toBeUndefined()
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -20,7 +20,7 @@ test('Can create and call function', () =>
 
         a = foo(1, 2)
     `)
-    lua.run()
+    expect(lua.run()).toBeUndefined()
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -45,7 +45,7 @@ test('Locals are kept local', () =>
         local w = 4
         a = foo(1, 2)
     `)
-    lua.run()
+    expect(lua.run()).toBeUndefined()
 
     expect(lua.global('x')).toBeUndefined()
     expect(lua.global('y')).toBeUndefined()
@@ -71,7 +71,7 @@ test('General itorators', () =>
             total = total + 1
         end
     `)
-    lua.run()
+    expect(lua.run()).toBeUndefined()
 
     const total = lua.global('total')
     expect(total).not.toBeUndefined()
@@ -88,7 +88,7 @@ test('Multiple values', () =>
 
         a, b = foo()
     `)
-    lua.run()
+    expect(lua.run()).toBeUndefined()
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -137,7 +137,7 @@ test('All operators', () =>
         h = e or f
         i = not f
     `)
-    lua.run()
+    expect(lua.run()).toBeUndefined()
 
     const is_number = (name: string, value: number) =>
     {
@@ -175,7 +175,7 @@ test('Tables', () =>
         table["test"] = 42
         table.d = true
     `)
-    lua.run()
+    expect(lua.run()).toBeUndefined()
 
     const b = lua.global('b')
     expect(b).not.toBeUndefined()
