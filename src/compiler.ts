@@ -295,6 +295,19 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     return ops
 }
 
+function replace_breaks(code: Op[], offset_from_end: number)
+{
+    for (const [i, op] of code.entries())
+    {
+        if (op.code == OpCode.Break)
+        {
+            const offset = code.length - i - 1 + offset_from_end
+            op.code = OpCode.Jump
+            op.arg = make_number(offset)
+        }
+    }
+}
+
 function compile_while(while_block: While | undefined, functions: Op[][]): Op[]
 {
     if (while_block == undefined)
@@ -303,6 +316,8 @@ function compile_while(while_block: While | undefined, functions: Op[][]): Op[]
     const debug = while_block.token.debug
     const ops: Op[] = []
     const body = compile_chunk(while_block.body, functions)
+    replace_breaks(body, 1)
+
     ops.push(...compile_expression(while_block.condition, functions))
     ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + 1), debug: debug })
     ops.push(...body)
@@ -317,9 +332,11 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
 
     const ops: Op[] = []
     const body = compile_chunk(for_block.body, functions)
-    ops.push(...compile_expression(for_block.itorator, functions))
+    replace_breaks(body, 1)
 
     const debug = for_block.token.debug
+    ops.push(...compile_expression(for_block.itorator, functions))
+
     const after_creating_itorator = ops.length
     ops.push({ code: OpCode.AssignPush, debug: debug })
     ops.push({ code: OpCode.Dup, debug: debug })
@@ -386,6 +403,10 @@ function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
                 break
             case StatementKind.Return:
                 ops.push(...compile_return(statement.return, functions))
+                break
+            case StatementKind.Break:
+                ops.push({ code: OpCode.Break, debug: { line: 0, column: 0 } })
+                break
         }
     }
 

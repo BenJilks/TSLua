@@ -414,6 +414,17 @@ function parse_return(stream: TokenStream): Statement | Error
     }
 }
 
+function parse_break(stream: TokenStream): Statement | Error
+{
+    const break_token = expect(stream, TokenKind.Break)
+    if (break_token instanceof Error)
+        return break_token
+
+    return {
+        kind: StatementKind.Break,
+    }
+}
+
 function parse_if(stream: TokenStream): Statement | Error
 {
     const if_token = expect(stream, TokenKind.If)
@@ -614,6 +625,8 @@ function parse_statement(stream: TokenStream): Statement | Error | undefined
             return parse_assign_or_expression(stream)
         case TokenKind.Return:
             return parse_return(stream)
+        case TokenKind.Break:
+            return parse_break(stream)
         case TokenKind.If:
             return parse_if(stream)
         case TokenKind.While:

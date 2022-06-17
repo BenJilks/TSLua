@@ -215,3 +215,25 @@ test('Sub-expressions', () =>
     expect(a?.number).toBe(6)
 })
 
+test('Break', () =>
+{
+    const lua = new Lua(`
+        i = 0
+        while i < 1 do
+            break
+            i = i + 1
+        end
+
+        for k, v in ipairs({ 1, 2 }) do
+            break
+            i = i + 1
+        end
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const i = lua.global('i')
+    expect(i).not.toBeUndefined()
+    expect(i?.data_type).toBe(DataType.Number)
+    expect(i?.number).toBe(0)
+})
+

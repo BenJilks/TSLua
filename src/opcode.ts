@@ -37,6 +37,7 @@ export enum OpCode {
     AssignPush,
     AssignSet,
     ArgumentCount,
+    Break,
 }
 
 export function op_code_name(op_code: OpCode): string
@@ -73,6 +74,7 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.AssignPush: return 'AssignPush[Debug]'
         case OpCode.AssignSet: return 'AssignSet[Debug]'
         case OpCode.ArgumentCount: return 'ArgumentCount[Debug]'
+        case OpCode.Break: return 'Break[Debug]'
         default:
             throw new Error()
     }

@@ -105,6 +105,7 @@ export enum StatementKind {
     While,
     For,
     Return,
+    Break,
 }
 
 export interface Statement {
