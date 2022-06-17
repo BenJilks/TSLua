@@ -469,16 +469,18 @@ function parse_if(stream: TokenStream): Statement | Error
     if (then instanceof Error)
         return then
     
-    const body = parse(stream)
+    const body = parse(stream, TokenKind.Else, TokenKind.End)
     if (body instanceof Error)
         return body
 
     let else_body: Chunk | undefined = undefined
-    if (consume(stream, TokenKind.Else))
+    const end = stream.next()
+    if (end.kind == TokenKind.Else)
     {
-        const chunk = parse(stream)
+        const chunk = parse(stream, TokenKind.End)
         if (chunk instanceof Error)
             return chunk
+        consume(stream, TokenKind.End)
         else_body = chunk
     }
     
@@ -507,10 +509,11 @@ function parse_while(stream: TokenStream): Statement | Error
     if (do_token instanceof Error)
         return do_token
     
-    const body = parse(stream)
+    const body = parse(stream, TokenKind.End)
     if (body instanceof Error)
         return body
 
+    consume(stream, TokenKind.End)
     return {
         kind: StatementKind.While,
         while: {
@@ -549,10 +552,11 @@ function parse_numeric_for(index: Token, stream: TokenStream): Statement | Error
     if (do_token instanceof Error)
         return do_token
 
-    const body = parse(stream)
+    const body = parse(stream, TokenKind.End)
     if (body instanceof Error)
         return body
 
+    consume(stream, TokenKind.End)
     return {
         kind: StatementKind.NumericFor,
         numeric_for: {
@@ -595,10 +599,11 @@ function parse_for(stream: TokenStream): Statement | Error
     if (do_token instanceof Error)
         return do_token
 
-    const body = parse(stream)
+    const body = parse(stream, TokenKind.End)
     if (body instanceof Error)
         return body
 
+    consume(stream, TokenKind.End)
     return {
         kind: StatementKind.For,
         for: {
@@ -641,10 +646,11 @@ function parse_function_value(function_token: Token, stream: TokenStream): Value
     if (params instanceof Error)
         return params
 
-    const body = parse(stream)
+    const body = parse(stream, TokenKind.End)
     if (body instanceof Error)
         return body
 
+    consume(stream, TokenKind.End)
     return {
         kind: ValueKind.Function,
         token: function_token,
@@ -741,7 +747,7 @@ function parse_function(stream: TokenStream): Statement | Error
     }
 }
 
-function parse_statement(stream: TokenStream): Statement | Error | undefined
+function parse_statement(stream: TokenStream, end_tokens: TokenKind[]): Statement | Error | undefined
 {
     const token = stream.peek()
     switch (token.kind)
@@ -761,23 +767,22 @@ function parse_statement(stream: TokenStream): Statement | Error | undefined
             return parse_for(stream)
         case TokenKind.Function:
             return parse_function(stream)
-        case TokenKind.End:
-            stream.next()
-        case TokenKind.Else:
-        case TokenKind.EOF:
-            return undefined
+        default:
+            if (end_tokens.includes(token.kind))
+                return undefined
+            return error(token, `Missing '${ token_kind_to_string(end_tokens[0]) }'`)
     }
-
-    return undefined
 }
 
-export function parse(stream: TokenStream): Chunk | Error
+export function parse(stream: TokenStream, ...end_tokens: TokenKind[]): Chunk | Error
 {
     const chunk: Chunk = { statements: [] }
+    if (end_tokens.length == 0)
+        end_tokens.push(TokenKind.EOF)
 
     while (true)
     {
-        const statement = parse_statement(stream)
+        const statement = parse_statement(stream, end_tokens)
         if (statement == undefined)
             break
         if (statement instanceof Error)

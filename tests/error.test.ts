@@ -26,3 +26,16 @@ test('Parsing errors', () =>
     expect(lua.run()).toEqual(new Error('7:5: expected \')\', got \'EOF\' instead'))
 })
 
+test('Matching end tokens', () =>
+{
+    const lua = new Lua(`
+        function foo()
+            return a
+        done
+
+        foo()
+    `)
+    
+    expect(lua.run()).toEqual(new Error('7:5: Missing \'end\''))
+})
+
