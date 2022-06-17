@@ -249,6 +249,7 @@ function compile_assignment(assignment: Assignment | undefined, functions: Op[][
                 ops.push({ code: OpCode.Swap, debug: debug })
                 ops.push(...compile_expression(lhs.index, functions))
                 ops.push({ code: OpCode.StoreIndex, debug: debug })
+                ops.push({ code: OpCode.Pop, debug: debug })
                 break
             }
 

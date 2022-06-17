@@ -70,6 +70,10 @@ test('General itorators', () =>
         for i in iter(10) do
             total = total + 1
         end
+
+        for k, v in ipairs({}) do
+            total = total + 1
+        end
     `)
     expect(lua.run()).toBeUndefined()
 

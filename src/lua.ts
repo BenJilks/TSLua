@@ -382,7 +382,7 @@ export class Lua
         }
 
         if (this.debug)
-            console.log('this.stack:', ...this.stack.map(std.variable_to_string))
+            console.log(...this.stack.map(std.variable_to_string))
         return true
     }
 
