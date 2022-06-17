@@ -263,3 +263,22 @@ test('Break', () =>
     expect(i?.number).toBe(0)
 })
 
+test('Local functions', () =>
+{
+    const lua = new Lua(`
+        package = {}
+
+        function package.new()
+            return 42
+        end
+
+        a = package.new()
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.Number)
+    expect(a?.number).toBe(42)
+})
+

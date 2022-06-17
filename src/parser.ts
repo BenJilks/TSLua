@@ -655,6 +655,52 @@ function parse_function_value(function_token: Token, stream: TokenStream): Value
     }
 }
 
+function parse_local_function(table_name: Token, stream: TokenStream): Statement | Error
+{
+    const local_name = expect(stream, TokenKind.Identifier)
+    if (local_name instanceof Error)
+        return local_name
+
+    const function_value = parse_function_value(local_name, stream)
+    if (function_value instanceof Error)
+        return function_value
+
+    return {
+        kind: StatementKind.Assignment,
+        assignment: {
+            token: table_name,
+            local: false,
+            lhs: [{
+                kind: ExpressionKind.Index,
+                token: table_name,
+                expression: {
+                    kind: ExpressionKind.Value,
+                    token: table_name,
+                    value: {
+                        kind: ValueKind.Variable,
+                        token: table_name,
+                        identifier: table_name.data,
+                    },
+                },
+                index: {
+                    kind: ExpressionKind.Value,
+                    token: local_name,
+                    value: {
+                        kind: ValueKind.StringLiteral,
+                        token: local_name,
+                        string: local_name.data,
+                    },
+                },
+            }],
+            rhs: [{
+                kind: ExpressionKind.Value,
+                token: local_name,
+                value: function_value,
+            }],
+        },
+    }
+}
+
 function parse_function(stream: TokenStream): Statement | Error
 {
     const function_token = expect(stream, TokenKind.Function)
@@ -664,6 +710,9 @@ function parse_function(stream: TokenStream): Statement | Error
     const name = expect(stream, TokenKind.Identifier)
     if (name instanceof Error)
         return name
+
+    if (consume(stream, TokenKind.Dot))
+        return parse_local_function(name, stream)
     
     const function_value = parse_function_value(name, stream)
     if (function_value instanceof Error)
