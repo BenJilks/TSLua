@@ -173,7 +173,13 @@ function compile_expression(expression: Expression | undefined, functions: Op[][
             return compile_operation(expression, OpCode.Multiply, functions)
         case ExpressionKind.Division:
             return compile_operation(expression, OpCode.Divide, functions)
+        case ExpressionKind.Concat:
+            return compile_operation(expression, OpCode.Concat, functions)
 
+        case ExpressionKind.Equals:
+            return compile_operation(expression, OpCode.Equals, functions)
+        case ExpressionKind.NotEquals:
+            return compile_operation(expression, OpCode.NotEquals, functions)
         case ExpressionKind.LessThen:
             return compile_operation(expression, OpCode.LessThen, functions)
         case ExpressionKind.GreaterThen:

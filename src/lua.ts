@@ -1,5 +1,5 @@
 import { Op, OpCode, op_code_name } from './opcode'
-import { DataType, NativeFunction, Variable, nil, make_number, make_boolean } from './runtime'
+import { DataType, NativeFunction, Variable, nil, make_number, make_boolean, make_string } from './runtime'
 import * as std from './lib'
 import { Lexer } from './lexer'
 import { parse } from './parser'
@@ -31,6 +31,40 @@ function is_true(val: Variable | undefined): boolean
         case DataType.NativeFunction: return true
         default:
             return false
+    }
+}
+
+function equals(a: Variable | undefined, b: Variable | undefined): boolean
+{
+    if (a == undefined && b == undefined)
+        return true
+    if (a == undefined || b == undefined)
+        return false
+
+    if (a.data_type != b.data_type)
+        return false
+
+    switch (a.data_type)
+    {
+        case DataType.Nil: return true
+        case DataType.Boolean: return a.boolean == b.boolean
+        case DataType.Number: return a.number == b.number
+        case DataType.String: return a.string == b.string
+        case DataType.Function: return a.function_id == b.function_id
+        case DataType.NativeFunction: return a.native_function == b.native_function
+        case DataType.Table:
+        {
+            if (a.table?.keys() != b.table?.keys())
+                return false
+
+            for (const key of a.table?.keys() ?? [])
+            {
+                if (!equals(a.table?.get(key), b.table?.get(key)))
+                    return false
+            }
+
+            return true
+        }
     }
 }
 
@@ -192,6 +226,28 @@ export class Lua
             case OpCode.Divide: this.operation((x, y) => x / y); break
             case OpCode.LessThen: this.compair((x, y) => x < y); break
             case OpCode.GreaterThen: this.compair((x, y) => x > y); break
+
+            case OpCode.Concat:
+            {
+                const x = this.stack.pop()?.string ?? ''
+                const y = this.stack.pop()?.string ?? ''
+                this.stack.push(make_string(x + y))
+                break
+            }
+
+            case OpCode.Equals:
+            {
+                const [x, y] = [this.stack.pop(), this.stack.pop()]
+                this.stack.push(make_boolean(equals(x, y)))
+                break
+            }
+
+            case OpCode.NotEquals:
+            {
+                const [x, y] = [this.stack.pop(), this.stack.pop()]
+                this.stack.push(make_boolean(!equals(x, y)))
+                break
+            }
 
             case OpCode.And:
             {

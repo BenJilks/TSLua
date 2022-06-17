@@ -29,7 +29,10 @@ export enum TokenKind {
     Subtract,
     Multiply,
     Division,
+    Concat,
 
+    Equals,
+    NotEquals,
     LessThen,
     GreaterThen,
     And,
@@ -132,6 +135,12 @@ const single_token_map: Map<string, TokenKind> = new Map([
     [';', TokenKind.Semicolon],
     [',', TokenKind.Comma],
     ['.', TokenKind.Dot],
+])
+
+const double_token_map: Map<string, TokenKind> = new Map([
+    ['==', TokenKind.Equals],
+    ['~=', TokenKind.NotEquals],
+    ['..', TokenKind.Concat],
 ])
 
 const keyword_map: Map<string, TokenKind> = new Map([
@@ -266,6 +275,26 @@ export class Lexer
         if (/\s/.test(c))
             return this.consume()
 
+        if (this.processing_stream.length > 1)
+        {
+            const double = c + this.processing_stream[1]
+            const dobule_token_type = double_token_map.get(double)
+            if (dobule_token_type != undefined)
+            {
+                yield this.token({
+                    data: double,
+                    kind: dobule_token_type,
+                    debug: {
+                        line: this.line,
+                        column: this.column,
+                    },
+                })
+                this.consume()
+                this.consume()
+                return
+            }
+        }
+        
         const single_token_type = single_token_map.get(c)
         if (single_token_type != undefined)
         {
@@ -424,7 +453,7 @@ export class Lexer
         })
         this.state = State.Initial
     }
-
+    
     private *on_char()
     {
         switch (this.state)

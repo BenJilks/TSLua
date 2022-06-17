@@ -7,8 +7,10 @@ import { Token, TokenKind, TokenStream, token_kind_to_string } from './lexer'
 const ORDERS = [
     [TokenKind.Multiply, TokenKind.Division],
     [TokenKind.Addition, TokenKind.Subtract],
+    [TokenKind.Concat],
     [TokenKind.LessThen, TokenKind.GreaterThen],
     [TokenKind.And, TokenKind.Or],
+    [TokenKind.Equals, TokenKind.NotEquals],
 ]
 
 function error(token: Token, message: string): Error
@@ -255,8 +257,11 @@ function operation_type_to_expression_kind(
         case TokenKind.Subtract: return ExpressionKind.Subtract
         case TokenKind.Multiply: return ExpressionKind.Multiplication
         case TokenKind.Division: return ExpressionKind.Division
+        case TokenKind.Concat: return ExpressionKind.Concat
         case TokenKind.LessThen: return ExpressionKind.LessThen
         case TokenKind.GreaterThen: return ExpressionKind.GreaterThen
+        case TokenKind.Equals: return ExpressionKind.Equals
+        case TokenKind.NotEquals: return ExpressionKind.NotEquals
         case TokenKind.And: return ExpressionKind.And
         case TokenKind.Or: return ExpressionKind.Or
         default:

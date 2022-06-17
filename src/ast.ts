@@ -36,7 +36,10 @@ export enum ExpressionKind {
     Subtract,
     Multiplication,
     Division,
+    Concat,
     
+    Equals,
+    NotEquals,
     LessThen,
     GreaterThen,
     And,

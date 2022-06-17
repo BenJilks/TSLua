@@ -136,6 +136,10 @@ test('All operators', () =>
         g = e and f
         h = e or f
         i = not f
+
+        j = "test" == "test"
+        k = "test" ~= "test"
+        l = "test" .. "test"
     `)
     expect(lua.run()).toBeUndefined()
 
@@ -164,6 +168,13 @@ test('All operators', () =>
     is_boolean('g', false)
     is_boolean('h', true)
     is_boolean('i', true)
+    is_boolean('j', true)
+    is_boolean('k', false)
+
+    const l = lua.global('l')
+    expect(l).not.toBeUndefined()
+    expect(l?.data_type).toBe(DataType.String)
+    expect(l?.string).toBe('testtest')
 })
 
 test('Tables', () =>
