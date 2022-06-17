@@ -270,6 +270,7 @@ export class Lua
             case OpCode.Jump: this.ip += arg?.number ?? 0; break
             case OpCode.JumpIfNot: if (!is_true(this.stack.pop())) { this.ip += arg?.number ?? 0 } break
             case OpCode.MakeLocal: this.locals.set(arg?.string ?? '', nil); break
+            case OpCode.NewTable: this.stack.push({ data_type: DataType.Table, table: new Map() }); break
 
             case OpCode.Return:
             {

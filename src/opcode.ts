@@ -9,6 +9,7 @@ export enum OpCode {
     Dup,
     Swap,
 
+    NewTable,
     LoadIndex,
     StoreIndex,
 
@@ -52,6 +53,7 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Pop: return 'Pop'
         case OpCode.Dup: return 'Dup'
         case OpCode.Swap: return 'Swap'
+        case OpCode.NewTable: return 'NewTable'
         case OpCode.LoadIndex: return 'LoadIndex'
         case OpCode.StoreIndex: return 'StoreIndex'
         case OpCode.Add: return 'Add'

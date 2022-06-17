@@ -55,14 +55,8 @@ function compile_value(value: Value | undefined, functions: Op[][]): Op[]
 
         case ValueKind.TableLiteral:
         {
-            const output: Op[] = [{
-                code: OpCode.Push,
-                arg: {
-                    data_type: DataType.Table,
-                    table: new Map(),
-                },
-                debug: debug,
-            }]
+            const output: Op[] = []
+            output.push({ code: OpCode.NewTable, debug: debug })
 
             for (const [key, expression] of [...value.table?.entries() ?? []].reverse())
             {
