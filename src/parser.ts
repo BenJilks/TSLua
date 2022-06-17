@@ -119,6 +119,19 @@ function parse_value(stream: TokenStream): Value | Error
 
 function parse_value_expression(stream: TokenStream): Expression | Error
 {
+    if (consume(stream, TokenKind.OpenBrace))
+    {
+        const sub_expression = parse_expression(stream)
+        if (sub_expression instanceof Error)
+            return sub_expression
+
+        const close_brace = expect(stream, TokenKind.CloseBrace)
+        if (close_brace instanceof Error)
+            return close_brace
+
+        return sub_expression
+    }
+
     const value = parse_value(stream)
     if (value instanceof Error)
         return value
@@ -294,20 +307,22 @@ function parse_expression(stream: TokenStream, order = 0): Expression | Error
     return parse_operation(stream, expression, order)
 }
 
-function parse_local_statement(local: Token, values: Expression[]): Statement
+function parse_local_statement(local: Token, values: Expression[]): Statement | Error
 {
+    const names: Token[] = []
+    for (const expression of values)
+    {
+        const value = expression.value
+        if (value == undefined || value.kind != ValueKind.Variable)
+            return error(expression.token, 'Invalid local name')
+        names.push(value.token)
+    }
+
     return { 
         kind: StatementKind.Local,
         local: {
             token: local,
-            names: values
-                .filter(x => x != undefined)
-                .map(x =>
-                {
-                    if (x == undefined || x.value == undefined)
-                        throw new Error()
-                    return x.value.token
-                }),
+            names: names,
         },
     }
 }

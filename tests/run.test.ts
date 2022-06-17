@@ -193,3 +193,14 @@ test('Tables', () =>
     expect(table?.table?.has('d')).toBeTruthy()
 })
 
+test('Sub-expressions', () =>
+{
+    const lua = new Lua('a = (1 + 2) * 2')
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.Number)
+    expect(a?.number).toBe(6)
+})
+
