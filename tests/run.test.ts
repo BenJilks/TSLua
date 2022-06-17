@@ -79,6 +79,32 @@ test('General itorators', () =>
     expect(total?.number).toBe(9)
 })
 
+test('Numeric itorators', () =>
+{
+    const lua = new Lua(`
+        total = 0
+        for i = 0, 10 do
+            total = total + 1
+        end
+
+        nums = ""
+        for i = 10, 0, -1 do
+            nums = nums .. i
+        end
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const total = lua.global('total')
+    expect(total).not.toBeUndefined()
+    expect(total?.data_type).toBe(DataType.Number)
+    expect(total?.number).toBe(10)
+
+    const nums = lua.global('nums')
+    expect(nums).not.toBeUndefined()
+    expect(nums?.data_type).toBe(DataType.String)
+    expect(nums?.string).toBe('10987654321')
+})
+
 test('Multiple values', () =>
 {
     const lua = new Lua(`

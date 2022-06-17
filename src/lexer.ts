@@ -34,7 +34,9 @@ export enum TokenKind {
     Equals,
     NotEquals,
     LessThen,
+    LessThenEquals,
     GreaterThen,
+    GreaterThenEquals,
     And,
     Or,
     Not,
@@ -139,6 +141,8 @@ const single_token_map: Map<string, TokenKind> = new Map([
 
 const double_token_map: Map<string, TokenKind> = new Map([
     ['==', TokenKind.Equals],
+    ['>=', TokenKind.LessThenEquals],
+    ['<=', TokenKind.GreaterThenEquals],
     ['~=', TokenKind.NotEquals],
     ['..', TokenKind.Concat],
 ])

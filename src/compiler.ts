@@ -1,4 +1,4 @@
-import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local } from './ast'
+import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local, NumericFor } from './ast'
 import { Value, ValueKind } from './ast'
 import { Op, OpCode } from './opcode'
 import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
@@ -182,8 +182,12 @@ function compile_expression(expression: Expression | undefined, functions: Op[][
             return compile_operation(expression, OpCode.NotEquals, functions)
         case ExpressionKind.LessThen:
             return compile_operation(expression, OpCode.LessThen, functions)
+        case ExpressionKind.LessThenEquals:
+            return compile_operation(expression, OpCode.LessThenEquals, functions)
         case ExpressionKind.GreaterThen:
             return compile_operation(expression, OpCode.GreaterThen, functions)
+        case ExpressionKind.GreaterThenEquals:
+            return compile_operation(expression, OpCode.GreaterThenEquals, functions)
         case ExpressionKind.And:
             return compile_operation(expression, OpCode.And, functions)
         case ExpressionKind.Or:
@@ -358,6 +362,45 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
     return ops
 }
 
+function compile_step(step: Expression | undefined, functions: Op[][]): Op[]
+{
+    if (step == undefined)
+        return [{ code: OpCode.Push, arg: make_number(1), debug: { line: 0, column: 0 } }]
+
+    return compile_expression(step, functions)
+}
+
+function compile_numeric_for(numeric_for_block: NumericFor | undefined, functions: Op[][]): Op[]
+{
+    if (numeric_for_block == undefined)
+        throw new Error()
+
+    const ops: Op[] = []
+    const body = compile_chunk(numeric_for_block.body, functions)
+    const step = compile_step(numeric_for_block.step, functions)
+    const index = numeric_for_block.index.data
+    const debug = numeric_for_block.index.debug
+    replace_breaks(body, step.length + 4)
+
+    ops.push(...compile_expression(numeric_for_block.start, functions))
+
+    const after_creating_itorator = ops.length
+    ops.push({ code: OpCode.Dup, debug: debug })
+    ops.push(...compile_expression(numeric_for_block.end, functions))
+    ops.push({ code: OpCode.NotEquals, debug: debug })
+    ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + step.length + 4), debug: debug })
+
+    ops.push({ code: OpCode.Store, arg: make_string(index), debug: debug })
+    ops.push(...body)
+    ops.push({ code: OpCode.Load, arg: make_string(index), debug: debug })
+    ops.push(...step)
+    ops.push({ code: OpCode.Add, debug: debug })
+    ops.push({ code: OpCode.Jump, arg: make_number(-ops.length + after_creating_itorator - 1), debug: debug })
+
+    ops.push({ code: OpCode.Pop, debug: debug })
+    return ops
+}
+
 function compile_return(return_block: Return | undefined, functions: Op[][]): Op[]
 {
     if (return_block == undefined)
@@ -400,6 +443,9 @@ function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
                 break
             case StatementKind.For:
                 ops.push(...compile_for(statement.for, functions))
+                break
+            case StatementKind.NumericFor:
+                ops.push(...compile_numeric_for(statement.numeric_for, functions))
                 break
             case StatementKind.Return:
                 ops.push(...compile_return(statement.return, functions))

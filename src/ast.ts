@@ -41,7 +41,9 @@ export enum ExpressionKind {
     Equals,
     NotEquals,
     LessThen,
+    LessThenEquals,
     GreaterThen,
+    GreaterThenEquals,
     And,
     Or,
     Not,
@@ -91,6 +93,14 @@ export interface For {
     token: Token,
 }
 
+export interface NumericFor {
+    index: Token,
+    start: Expression,
+    end: Expression,
+    step: Expression | undefined,
+    body: Chunk,
+}
+
 export interface Return {
     values: Expression[],
     token: Token,
@@ -104,6 +114,7 @@ export enum StatementKind {
     If,
     While,
     For,
+    NumericFor,
     Return,
     Break,
 }
@@ -116,6 +127,7 @@ export interface Statement {
     if?: IfBlock,
     while?: While,
     for?: For,
+    numeric_for?: NumericFor,
     return?: Return,
 }
 

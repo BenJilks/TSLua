@@ -8,7 +8,7 @@ const ORDERS = [
     [TokenKind.Multiply, TokenKind.Division],
     [TokenKind.Addition, TokenKind.Subtract],
     [TokenKind.Concat],
-    [TokenKind.LessThen, TokenKind.GreaterThen],
+    [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals],
     [TokenKind.And, TokenKind.Or],
     [TokenKind.Equals, TokenKind.NotEquals],
 ]
@@ -145,7 +145,7 @@ function parse_value_expression(stream: TokenStream): Expression | Error
     }
 }
 
-function parse_unary_operation(stream: TokenStream): Expression | Error
+function parse_not_operation(stream: TokenStream): Expression | Error
 {
     const not = expect(stream, TokenKind.Not)
     if (not instanceof Error)
@@ -159,6 +159,32 @@ function parse_unary_operation(stream: TokenStream): Expression | Error
         kind: ExpressionKind.Not,
         token: not,
         lhs: expression,
+    }
+}
+
+function parse_negate_operation(stream: TokenStream): Expression | Error
+{
+    const subtract = expect(stream, TokenKind.Subtract)
+    if (subtract instanceof Error)
+        return subtract
+
+    const expression = parse_expression(stream)
+    if (expression instanceof Error)
+        return expression
+
+    return {
+        kind: ExpressionKind.Subtract,
+        token: subtract,
+        lhs: {
+            kind: ExpressionKind.Value,
+            token: subtract,
+            value: {
+                kind: ValueKind.NumberLiteral,
+                token: subtract,
+                number: 0,
+            },
+        },
+        rhs: expression,
     }
 }
 
@@ -259,7 +285,9 @@ function operation_type_to_expression_kind(
         case TokenKind.Division: return ExpressionKind.Division
         case TokenKind.Concat: return ExpressionKind.Concat
         case TokenKind.LessThen: return ExpressionKind.LessThen
+        case TokenKind.LessThenEquals: return ExpressionKind.LessThenEquals
         case TokenKind.GreaterThen: return ExpressionKind.GreaterThen
+        case TokenKind.GreaterThenEquals: return ExpressionKind.GreaterThenEquals
         case TokenKind.Equals: return ExpressionKind.Equals
         case TokenKind.NotEquals: return ExpressionKind.NotEquals
         case TokenKind.And: return ExpressionKind.And
@@ -299,7 +327,9 @@ function parse_operation(stream: TokenStream,
 function parse_expression(stream: TokenStream, order = 0): Expression | Error
 {
     if (stream.peek().kind == TokenKind.Not)
-        return parse_unary_operation(stream)
+        return parse_not_operation(stream)
+    if (stream.peek().kind == TokenKind.Subtract)
+        return parse_negate_operation(stream)
 
     const value = parse_value_expression(stream)
     if (value instanceof Error)
@@ -491,6 +521,50 @@ function parse_while(stream: TokenStream): Statement | Error
     }
 }
 
+function parse_numeric_for(index: Token, stream: TokenStream): Statement | Error
+{
+    const start = parse_expression(stream)
+    if (start instanceof Error)
+        return start
+
+    const comma = expect(stream, TokenKind.Comma)
+    if (comma instanceof Error)
+        return comma
+
+    const end = parse_expression(stream)
+    if (end instanceof Error)
+        return end
+
+    let step: Expression | undefined = undefined
+    if (consume(stream, TokenKind.Comma))
+    {
+        const expression = parse_expression(stream)
+        if (expression instanceof Error)
+            return expression
+
+        step = expression
+    }
+
+    const do_token = expect(stream, TokenKind.Do)
+    if (do_token instanceof Error)
+        return do_token
+
+    const body = parse(stream)
+    if (body instanceof Error)
+        return body
+
+    return {
+        kind: StatementKind.NumericFor,
+        numeric_for: {
+            index: index,
+            start: start,
+            end: end,
+            step: step,
+            body: body,
+        },
+    }
+}
+
 function parse_for(stream: TokenStream): Statement | Error
 {
     const for_token = expect(stream, TokenKind.For)
@@ -506,6 +580,9 @@ function parse_for(stream: TokenStream): Statement | Error
         items.push(item)
     }
 
+    if (consume(stream, TokenKind.Assign))
+        return parse_numeric_for(items[0], stream)
+    
     const in_token = expect(stream, TokenKind.In)
     if (in_token instanceof Error)
         return in_token

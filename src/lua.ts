@@ -225,12 +225,14 @@ export class Lua
             case OpCode.Multiply: this.operation((x, y) => x * y); break
             case OpCode.Divide: this.operation((x, y) => x / y); break
             case OpCode.LessThen: this.compair((x, y) => x < y); break
+            case OpCode.LessThenEquals: this.compair((x, y) => x <= y); break
             case OpCode.GreaterThen: this.compair((x, y) => x > y); break
+            case OpCode.GreaterThenEquals: this.compair((x, y) => x >= y); break
 
             case OpCode.Concat:
             {
-                const x = this.stack.pop()?.string ?? ''
-                const y = this.stack.pop()?.string ?? ''
+                const x = std.variable_to_string(this.stack.pop() ?? nil)
+                const y = std.variable_to_string(this.stack.pop() ?? nil)
                 this.stack.push(make_string(x + y))
                 break
             }
