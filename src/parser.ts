@@ -21,9 +21,23 @@ function expect(stream: TokenStream, kind: TokenKind): Token | Error
 {
     const token = stream.peek()
     if (token.kind != kind)
-        return error(token, `expected '${ token_kind_to_string(kind) }', got '${ token_kind_to_string(token.kind) }' instead`)
+    {
+        return error(token, 
+            `expected '${ token_kind_to_string(kind) }', ` +
+            `got '${ token_kind_to_string(token.kind) }' instead`)
+    }
 
     return stream.next()
+}
+
+function consume(stream: TokenStream, kind: TokenKind): boolean
+{
+    const token = stream.peek()
+    if (token.kind != kind)
+        return false
+
+    stream.next()
+    return true
 }
 
 function parse_table(stream: TokenStream): Value | Error
@@ -40,7 +54,7 @@ function parse_table(stream: TokenStream): Value | Error
         if (element instanceof Error)
             return element
 
-        if (!(expect(stream, TokenKind.Assign) instanceof Error))
+        if (consume(stream, TokenKind.Assign))
         {
             const value = parse_expression(stream)
             if (value instanceof Error)
@@ -62,7 +76,7 @@ function parse_table(stream: TokenStream): Value | Error
             elements.set(key, element)
         }
 
-        if (expect(stream, TokenKind.Comma) instanceof Error)
+        if (!consume(stream, TokenKind.Comma))
             break
     }
 
@@ -103,6 +117,19 @@ function parse_value(stream: TokenStream): Value | Error
     }
 }
 
+function parse_value_expression(stream: TokenStream): Expression | Error
+{
+    const value = parse_value(stream)
+    if (value instanceof Error)
+        return value
+
+    return {
+        kind: ExpressionKind.Value,
+        token: value.token,
+        value: value,
+    }
+}
+
 function parse_unary_operation(stream: TokenStream): Expression | Error
 {
     const not = expect(stream, TokenKind.Not)
@@ -120,94 +147,90 @@ function parse_unary_operation(stream: TokenStream): Expression | Error
     }
 }
 
-function parse_expression_value(stream: TokenStream): Expression | Error
+function parse_call(func: Expression, stream: TokenStream): Expression | Error
 {
-    if (stream.peek().kind == TokenKind.Not)
-        return parse_unary_operation(stream)
-
-    const value = parse_value(stream)
-    if (value instanceof Error)
-        return value
-
-    let result: Expression = {
-        kind: ExpressionKind.Value,
-        token: value.token,
-        value: value,
-    }
-
-    while ([TokenKind.OpenBrace, TokenKind.OpenSquare, TokenKind.Dot].includes(stream.peek().kind))
+    const open_brace = stream.next()
+    const args: Expression[] = []
+    while (stream.peek().kind != TokenKind.CloseBrace)
     {
-        const open_brace = expect(stream, TokenKind.OpenBrace)
-        if (!(open_brace instanceof Error))
-        {
-            const args: Expression[] = []
-            while (stream.peek().kind != TokenKind.CloseBrace)
-            {
-                const argument = parse_expression(stream)
-                if (argument instanceof Error)
-                    break
+        const argument = parse_expression(stream)
+        if (argument instanceof Error)
+            break
 
-                args.push(argument)
-                if (expect(stream, TokenKind.Comma) instanceof Error)
-                    break
-            }
-    
-            const close_brace = expect(stream, TokenKind.CloseBrace) 
-            if (close_brace instanceof Error)
-                return close_brace
-
-            result = { 
-                kind: ExpressionKind.Call,
-                token: open_brace,
-                expression: result,
-                arguments: args,
-            }
-        }
-
-        const open_square = expect(stream, TokenKind.OpenSquare)
-        if (!(open_square instanceof Error))
-        {
-            const index = parse_expression(stream)
-            if (index instanceof Error)
-                return index
-
-            const close_square = expect(stream, TokenKind.CloseSquare)
-            if (close_square instanceof Error)
-                return close_square
-
-            result = { 
-                kind: ExpressionKind.Index,
-                token: open_square,
-                expression: result,
-                index: index,
-            }
-        }
-
-        const dot = expect(stream, TokenKind.Dot)
-        if (!(dot instanceof Error))
-        {
-            const index = expect(stream, TokenKind.Identifier)
-            if (index instanceof Error)
-                return index
-
-            result = { 
-                kind: ExpressionKind.Index,
-                expression: result,
-                token: dot,
-                index: {
-                    kind: ExpressionKind.Value,
-                    token: index,
-                    value: {
-                        kind: ValueKind.StringLiteral,
-                        token: index,
-                        string: index.data,
-                    },
-                },
-            }
-        }
+        args.push(argument)
+        if (!consume(stream, TokenKind.Comma))
+            break
     }
 
-    return result
+    const close_brace = expect(stream, TokenKind.CloseBrace) 
+    if (close_brace instanceof Error)
+        return close_brace
+
+    return parse_access_expression({
+        kind: ExpressionKind.Call,
+        token: open_brace,
+        expression: func,
+        arguments: args,
+    }, stream)
+}
+
+function parse_index(table: Expression, stream: TokenStream): Expression | Error
+{
+    const open_square = stream.next()
+    const index = parse_expression(stream)
+    if (index instanceof Error)
+        return index
+
+    const close_square = expect(stream, TokenKind.CloseSquare)
+    if (close_square instanceof Error)
+        return close_square
+
+    return parse_access_expression({
+        kind: ExpressionKind.Index,
+        token: open_square,
+        expression: table,
+        index: index,
+    }, stream)
+}
+
+function parse_dot(table: Expression, stream: TokenStream): Expression | Error
+{
+    const dot = stream.next()
+    const index = expect(stream, TokenKind.Identifier)
+    if (index instanceof Error)
+        return index
+
+    return parse_access_expression({
+        kind: ExpressionKind.Index,
+        expression: table,
+        token: dot,
+        index: {
+            kind: ExpressionKind.Value,
+            token: index,
+            value: {
+                kind: ValueKind.StringLiteral,
+                token: index,
+                string: index.data,
+            },
+        },
+    }, stream)
+}
+
+function parse_access_expression(expression: Expression, stream: TokenStream): Expression | Error
+{
+    switch (stream.peek().kind)
+    {
+        case TokenKind.OpenBrace:
+            return parse_call(expression, stream)
+
+        case TokenKind.OpenSquare:
+            return parse_index(expression, stream)
+        
+        case TokenKind.Dot:
+            return parse_dot(expression, stream)
+    }
+
+    return expression
 }
 
 function operation_type_to_expression_kind(
@@ -257,11 +280,18 @@ function parse_operation(stream: TokenStream,
 
 function parse_expression(stream: TokenStream, order = 0): Expression | Error
 {
-    const lhs = parse_expression_value(stream)
-    if (lhs instanceof Error)
-        return lhs
+    if (stream.peek().kind == TokenKind.Not)
+        return parse_unary_operation(stream)
 
-    return parse_operation(stream, lhs, order)
+    const value = parse_value_expression(stream)
+    if (value instanceof Error)
+        return value
+
+    const expression = parse_access_expression(value, stream)
+    if (expression instanceof Error)
+        return expression
+
+    return parse_operation(stream, expression, order)
 }
 
 function parse_local_statement(local: Token, values: Expression[]): Statement
@@ -286,7 +316,7 @@ function parse_assign_or_expression(stream: TokenStream): Statement | Error
 {
     const local = expect(stream, TokenKind.Local)
     const lhs: Expression[] = []
-    while (lhs.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
+    while (lhs.length == 0 || consume(stream, TokenKind.Comma))
     {
         const lvalue = parse_expression(stream)
         if (lvalue instanceof Error)
@@ -304,7 +334,7 @@ function parse_assign_or_expression(stream: TokenStream): Statement | Error
     }
 
     const rhs: Expression[] = []
-    while (rhs.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
+    while (rhs.length == 0 || consume(stream, TokenKind.Comma))
     {
         const rvalue = parse_expression(stream)
         if (rvalue instanceof Error)
@@ -330,16 +360,16 @@ function parse_return(stream: TokenStream): Statement | Error
         return ret
 
     const values: Expression[] = []
-    while (values.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
+    while (values.length == 0 || consume(stream, TokenKind.Comma))
     {
         const value = parse_expression(stream)
         if (value instanceof Error)
         {
-            if (values.length == 0)
-                break
-            else
+            if (values.length > 0)
                 return value
+            break
         }
+
         values.push(value)
     }
 
@@ -383,7 +413,7 @@ function parse_if(stream: TokenStream): Statement | Error
         return body
 
     let else_body: Chunk | undefined = undefined
-    if (!(expect(stream, TokenKind.Else) instanceof Error))
+    if (consume(stream, TokenKind.Else))
     {
         const chunk = parse(stream)
         if (chunk instanceof Error)
@@ -437,7 +467,7 @@ function parse_for(stream: TokenStream): Statement | Error
         return for_token
 
     const items: Token[] = []
-    while (items.length == 0 || !(expect(stream, TokenKind.Comma) instanceof Error))
+    while (items.length == 0 || consume(stream, TokenKind.Comma))
     {
         const item = expect(stream, TokenKind.Identifier)
         if (item instanceof Error)
@@ -486,7 +516,7 @@ function parse_function_params(stream: TokenStream): Token[] | Error
             break
 
         params.push(param)
-        if (expect(stream, TokenKind.Comma) instanceof Error)
+        if (!consume(stream, TokenKind.Comma))
             break
     }
 
