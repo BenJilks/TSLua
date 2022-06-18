@@ -7,6 +7,7 @@ export enum State {
     NumberLiteralDot,
     NumberLiteralExpSign,
     NumberLiteralExp,
+    Comment,
 }
 
 export enum TokenKind {
@@ -282,6 +283,12 @@ export class Lexer
         if (this.processing_stream.length > 1)
         {
             const double = c + this.processing_stream[1]
+            if (double == '--')
+            {
+                this.state = State.Comment
+                return
+            }
+
             const dobule_token_type = double_token_map.get(double)
             if (dobule_token_type != undefined)
             {
@@ -457,6 +464,15 @@ export class Lexer
         })
         this.state = State.Initial
     }
+
+    private comment()
+    {
+        const c = this.current()
+        this.consume()
+        
+        if (c == '\n')
+            this.state = State.Initial
+    }
     
     private *on_char()
     {
@@ -482,6 +498,9 @@ export class Lexer
 			    break
             case State.NumberLiteralExp:
 			    yield* this.number_exp()
+			    break
+            case State.Comment:
+			    this.comment()
 			    break
         }
     }

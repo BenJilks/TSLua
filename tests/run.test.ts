@@ -286,3 +286,18 @@ test('Local functions', () =>
     expect(a?.number).toBe(42)
 })
 
+test('Comments', () =>
+{
+    const lua = new Lua(`
+        -- This is a comment
+        a = 1 -- A different comment
+        -- More comments
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.Number)
+    expect(a?.number).toBe(1)
+})
+

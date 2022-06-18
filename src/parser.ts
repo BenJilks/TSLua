@@ -9,8 +9,8 @@ const ORDERS = [
     [TokenKind.Addition, TokenKind.Subtract],
     [TokenKind.Concat],
     [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals],
-    [TokenKind.And, TokenKind.Or],
     [TokenKind.Equals, TokenKind.NotEquals],
+    [TokenKind.And, TokenKind.Or],
 ]
 
 function error(token: Token, message: string): Error
