@@ -301,3 +301,31 @@ test('Comments', () =>
     expect(a?.number).toBe(1)
 })
 
+test('If else', () =>
+{
+    const lua = new Lua(`
+        if true then
+            a = 1
+        else
+            a = 2
+        end
+
+        if false then
+            b = 1
+        else
+            b = 2
+        end
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.Number)
+    expect(a?.number).toBe(1)
+
+    const b = lua.global('b')
+    expect(b).not.toBeUndefined()
+    expect(b?.data_type).toBe(DataType.Number)
+    expect(b?.number).toBe(2)
+})
+

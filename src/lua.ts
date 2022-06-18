@@ -133,6 +133,23 @@ export class Lua
         this.assign_stack_heigth = 0
     }
 
+    call(function_id: number, args: Variable[], locals?: Map<string, Variable>): Error | Variable[]
+    {
+        for (const arg of args)
+            this.stack.push(arg)
+        this.stack.push(make_number(args.length))
+        this.locals = locals ?? new Map()
+        this.ip = function_id
+
+        const result = this.run()
+        if (result instanceof Error)
+            return result
+
+        const return_values = this.stack
+        this.reset()
+        return return_values
+    }
+
     run(): Error | void
     {
         if (this.error != undefined)

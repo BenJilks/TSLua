@@ -279,7 +279,7 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     const debug = if_block.token.debug
     const ops: Op[] = []
     const body = compile_chunk(if_block.body, functions)
-    const offset = body.length + (if_block.else_body == undefined ? 1 : 0) - 1
+    const offset = body.length + (if_block.else_body == undefined ? 0 : 1)
     ops.push(...compile_expression(if_block.condition, functions))
     ops.push({ code: OpCode.JumpIfNot, arg: make_number(offset), debug: debug })
     ops.push(...body)
@@ -287,7 +287,7 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     if (if_block.else_body != undefined)
     {
         const else_body = compile_chunk(if_block.else_body, functions)
-        ops.push({ code: OpCode.Jump, arg: make_number(else_body.length - 1), debug: debug })
+        ops.push({ code: OpCode.Jump, arg: make_number(else_body.length), debug: debug })
         ops.push(...else_body)
     }
 
