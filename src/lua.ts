@@ -352,7 +352,8 @@ export class Lua
                     break
                 }
 
-                return error(`Lua value '${ name }' is not defined`)
+                this.stack.push(nil)
+                break
             }
 
             case OpCode.Call:
