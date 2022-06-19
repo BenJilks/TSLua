@@ -372,3 +372,32 @@ test('Length operator', () =>
     expect(b?.number).toBe(3)
 })
 
+test('Local to block', () =>
+{
+    const lua = new Lua(`
+        function foo()
+            local y, bar
+            y = 1
+
+            if true then
+                local x
+                x = y
+                bar = function() return x end
+            end
+
+            if x ~= nil then
+                return nil
+            end
+            return bar
+        end
+
+        a = foo()()
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.Number)
+    expect(a?.number).toBe(1)
+})
+

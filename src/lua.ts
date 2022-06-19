@@ -184,6 +184,20 @@ export class Lua
         this.stack.push(make_boolean(op(x, y)))
     }
 
+    private capture_locals(): Map<string, Variable>
+    {
+        const captured = new Map()
+        for (const locals of this.locals_stack.reverse())
+        {
+            for (const [name, value] of locals.entries())
+                captured.set(name, value)
+        }
+
+        for (const [name, value] of this.locals.entries())
+            captured.set(name, value)
+        return captured
+    }
+
     step(): boolean | Error
     {
         if (this.error != undefined)
@@ -290,6 +304,15 @@ export class Lua
             case OpCode.MakeLocal: this.locals.set(arg?.string ?? '', nil); break
             case OpCode.NewTable: this.stack.push({ data_type: DataType.Table, table: new Map() }); break
 
+            case OpCode.StartBlock:
+                this.locals_stack.push(this.locals)
+                this.locals = new Map()
+                break
+
+            case OpCode.EndBlock:
+                this.locals = this.locals_stack.pop() ?? new Map()
+                break
+
             case OpCode.Length:
             {
                 const value = this.stack.pop() ?? nil
@@ -333,17 +356,36 @@ export class Lua
             case OpCode.Store:
             {
                 const name = arg?.string ?? ''
+                const value = this.stack.pop() ?? nil
                 if (this.locals.has(name))
-                    this.locals.set(name, this.stack.pop() ?? nil)
-                else
-                    this.globals.set(name, this.stack.pop() ?? nil)
+                {
+                    this.locals.set(name, value)
+                    break
+                }
+
+
+                let did_find = false
+                for (const locals of this.locals_stack)
+                {
+                    if (locals.has(name))
+                    {
+                        did_find = true
+                        locals.set(name, value)
+                        break
+                    }
+                }
+
+                if (did_find)
+                    break
+
+                this.globals.set(name, value)
                 break
             }
 
             case OpCode.Push:
             {
                 if (this.locals_stack.length > 0 && arg?.data_type == DataType.Function)
-                    arg.locals = this.locals
+                    arg.locals = this.capture_locals()
                 this.stack.push(arg ?? nil)
                 break
             }
@@ -357,6 +399,21 @@ export class Lua
                     this.stack.push(local)
                     break
                 }
+
+                let did_find = false
+                for (const locals of this.locals_stack)
+                {
+                    const local = locals.get(name)
+                    if (local != undefined)
+                    {
+                        did_find = true
+                        this.stack.push(local)
+                        break
+                    }
+                }
+
+                if (did_find)
+                    break
 
                 const global = this.globals.get(name)
                 if (global != undefined)

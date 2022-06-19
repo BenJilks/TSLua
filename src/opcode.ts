@@ -33,6 +33,8 @@ export enum OpCode {
     Length,
     IsNil,
 
+    StartBlock,
+    EndBlock,
     MakeLocal,
     Call,
     Return,
@@ -76,6 +78,8 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Negate: return 'Negate'
         case OpCode.Length: return 'Length'
         case OpCode.IsNil: return 'IsNil'
+        case OpCode.StartBlock: return 'StartBlock'
+        case OpCode.EndBlock: return 'EndBlock'
         case OpCode.MakeLocal: return 'MakeLocal'
         case OpCode.Call: return 'Call'
         case OpCode.Return: return 'Return'

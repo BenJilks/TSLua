@@ -302,6 +302,7 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     const debug = if_block.token.debug
     const ops: Op[] = []
     const body = compile_chunk(if_block.body, functions)
+    ops.push({ code: OpCode.StartBlock, debug: debug })
     ops.push(...compile_expression(if_block.condition, functions))
     ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + 1), debug: debug })
     ops.push(...body)
@@ -311,6 +312,7 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     for (const if_else_chunk of if_else_chunks)
         ops.push(...if_else_chunk)
     ops.push(...else_chunk)
+    ops.push({ code: OpCode.EndBlock, debug: debug })
 
     return ops
 }
@@ -338,10 +340,12 @@ function compile_while(while_block: While | undefined, functions: Op[][]): Op[]
     const body = compile_chunk(while_block.body, functions)
     replace_breaks(body, 1)
 
+    ops.push({ code: OpCode.StartBlock, debug: debug })
     ops.push(...compile_expression(while_block.condition, functions))
     ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + 1), debug: debug })
     ops.push(...body)
     ops.push({ code: OpCode.Jump, arg: make_number(-ops.length - 1), debug: debug })
+    ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops
 }
 
@@ -355,6 +359,7 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
     replace_breaks(body, 1)
 
     const debug = for_block.token.debug
+    ops.push({ code: OpCode.StartBlock, debug: debug })
     ops.push(...compile_expression(for_block.itorator, functions))
 
     const after_creating_itorator = ops.length
@@ -375,6 +380,7 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
     ops.push({ code: OpCode.Jump, arg: make_number(-ops.length + after_creating_itorator - 1), debug: debug })
     ops.push({ code: OpCode.Pop, debug: debug })
     ops.push({ code: OpCode.Pop, debug: debug })
+    ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops
 }
 
@@ -398,6 +404,7 @@ function compile_numeric_for(numeric_for_block: NumericFor | undefined, function
     const debug = numeric_for_block.index.debug
     replace_breaks(body, step.length + 4)
 
+    ops.push({ code: OpCode.StartBlock, debug: debug })
     ops.push(...compile_expression(numeric_for_block.start, functions))
 
     const after_creating_itorator = ops.length
@@ -414,6 +421,7 @@ function compile_numeric_for(numeric_for_block: NumericFor | undefined, function
     ops.push({ code: OpCode.Jump, arg: make_number(-ops.length + after_creating_itorator - 1), debug: debug })
 
     ops.push({ code: OpCode.Pop, debug: debug })
+    ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops
 }
 
