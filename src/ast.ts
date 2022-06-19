@@ -46,7 +46,10 @@ export enum ExpressionKind {
     GreaterThenEquals,
     And,
     Or,
+
     Not,
+    Negate,
+    Length,
 }
 
 export interface Expression {

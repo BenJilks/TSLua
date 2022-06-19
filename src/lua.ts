@@ -283,11 +283,24 @@ export class Lua
             }
 
             case OpCode.Not: this.stack.push(make_boolean(!is_true(this.stack.pop()))); break
+            case OpCode.Negate: this.stack.push(make_number(-(this.stack.pop()?.number ?? 0))); break
             case OpCode.IsNil: this.stack.push(make_boolean((this.stack.pop() ?? nil) == nil)); break
             case OpCode.Jump: this.ip += arg?.number ?? 0; break
             case OpCode.JumpIfNot: if (!is_true(this.stack.pop())) { this.ip += arg?.number ?? 0 } break
             case OpCode.MakeLocal: this.locals.set(arg?.string ?? '', nil); break
             case OpCode.NewTable: this.stack.push({ data_type: DataType.Table, table: new Map() }); break
+
+            case OpCode.Length:
+            {
+                const value = this.stack.pop() ?? nil
+                switch (value.data_type)
+                {
+                    case DataType.Table: this.stack.push(make_number(value.table?.size ?? 0)); break
+                    case DataType.String: this.stack.push(make_number(value.string?.length ?? 0)); break
+                    default: this.stack.push(nil)
+                }
+                break
+            }
 
             case OpCode.Return:
             {

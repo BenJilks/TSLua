@@ -27,7 +27,10 @@ export enum OpCode {
     GreaterThenEquals,
     And,
     Or,
+
     Not,
+    Negate,
+    Length,
     IsNil,
 
     MakeLocal,
@@ -70,6 +73,8 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.And: return 'And'
         case OpCode.Or: return 'Or'
         case OpCode.Not: return 'Not'
+        case OpCode.Negate: return 'Negate'
+        case OpCode.Length: return 'Length'
         case OpCode.IsNil: return 'IsNil'
         case OpCode.MakeLocal: return 'MakeLocal'
         case OpCode.Call: return 'Call'

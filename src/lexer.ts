@@ -31,6 +31,7 @@ export enum TokenKind {
     Multiply,
     Division,
     Concat,
+    Hash,
 
     Equals,
     NotEquals,
@@ -138,6 +139,7 @@ const single_token_map: Map<string, TokenKind> = new Map([
     [';', TokenKind.Semicolon],
     [',', TokenKind.Comma],
     ['.', TokenKind.Dot],
+    ['#', TokenKind.Hash],
 ])
 
 const double_token_map: Map<string, TokenKind> = new Map([

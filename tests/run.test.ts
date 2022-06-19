@@ -353,3 +353,22 @@ test('If, ElseIf and Else', () =>
     expect(b?.number).toBe(2)
 })
 
+test('Length operator', () =>
+{
+    const lua = new Lua(`
+        a = #"Hello, world!"
+        b = #{ "a", "b", "c" }
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.Number)
+    expect(a?.number).toBe(13)
+
+    const b = lua.global('b')
+    expect(b).not.toBeUndefined()
+    expect(b?.data_type).toBe(DataType.Number)
+    expect(b?.number).toBe(3)
+})
+

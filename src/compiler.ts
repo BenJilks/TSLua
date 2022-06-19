@@ -136,11 +136,11 @@ function compile_unary_operation(expression: Expression | undefined,
                                  functions: Op[][]): Op[]
 
 {
-    if (expression == undefined || expression.lhs == undefined)
+    if (expression == undefined || expression.expression == undefined)
         throw new Error()
 
     const ops: Op[] = []
-    ops.push(...compile_expression(expression.lhs, functions))
+    ops.push(...compile_expression(expression.expression, functions))
     ops.push({ code: operation, debug: expression.token.debug })
     return ops
 }
@@ -186,8 +186,13 @@ function compile_expression(expression: Expression | undefined, functions: Op[][
             return compile_operation(expression, OpCode.And, functions)
         case ExpressionKind.Or:
             return compile_operation(expression, OpCode.Or, functions)
+
         case ExpressionKind.Not:
             return compile_unary_operation(expression, OpCode.Not, functions)
+        case ExpressionKind.Negate:
+            return compile_unary_operation(expression, OpCode.Negate, functions)
+        case ExpressionKind.Length:
+            return compile_unary_operation(expression, OpCode.Length, functions)
 
         default:
             throw new Error()

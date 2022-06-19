@@ -4,6 +4,12 @@ import { Statement, StatementKind } from './ast'
 import { Value, ValueKind } from './ast'
 import { Token, TokenKind, TokenStream, token_kind_to_string } from './lexer'
 
+const UNARY = [
+    TokenKind.Not,
+    TokenKind.Subtract,
+    TokenKind.Hash,
+]
+
 const ORDERS = [
     [TokenKind.And, TokenKind.Or],
     [TokenKind.Equals, TokenKind.NotEquals],
@@ -119,6 +125,34 @@ function parse_value(stream: TokenStream): Value | Error
     }
 }
 
+function unary_type_to_expression_kind(kind: TokenKind): ExpressionKind
+{
+    switch (kind)
+    {
+        case TokenKind.Not: return ExpressionKind.Not
+        case TokenKind.Subtract: return ExpressionKind.Negate
+        case TokenKind.Hash: return ExpressionKind.Length
+        default:
+            throw new Error()
+    }
+}
+
+function parse_unary_operator(stream: TokenStream): Expression | Error
+{
+    const operator_token = stream.next()
+    const operator = unary_type_to_expression_kind(operator_token.kind)
+
+    const expression = parse_expression(stream)
+    if (expression instanceof Error)
+        return expression
+
+    return {
+        kind: operator,
+        token: operator_token,
+        expression: expression,
+    }
+}
+
 function parse_value_expression(stream: TokenStream): Expression | Error
 {
     if (consume(stream, TokenKind.OpenBrace))
@@ -134,10 +168,8 @@ function parse_value_expression(stream: TokenStream): Expression | Error
         return sub_expression
     }
 
-    if (stream.peek().kind == TokenKind.Not)
-        return parse_not_operation(stream)
-    if (stream.peek().kind == TokenKind.Subtract)
-        return parse_negate_operation(stream)
+    if (UNARY.includes(stream.peek().kind))
+        return parse_unary_operator(stream)
 
     const value = parse_value(stream)
     if (value instanceof Error)
@@ -150,49 +182,6 @@ function parse_value_expression(stream: TokenStream): Expression | Error
     }
 
     return parse_access_expression(expression_value, stream)
-}
-
-function parse_not_operation(stream: TokenStream): Expression | Error
-{
-    const not = expect(stream, TokenKind.Not)
-    if (not instanceof Error)
-        return not
-
-    const expression = parse_expression(stream)
-    if (expression instanceof Error)
-        return expression
-
-    return {
-        kind: ExpressionKind.Not,
-        token: not,
-        lhs: expression,
-    }
-}
-
-function parse_negate_operation(stream: TokenStream): Expression | Error
-{
-    const subtract = expect(stream, TokenKind.Subtract)
-    if (subtract instanceof Error)
-        return subtract
-
-    const expression = parse_expression(stream)
-    if (expression instanceof Error)
-        return expression
-
-    return {
-        kind: ExpressionKind.Subtract,
-        token: subtract,
-        lhs: {
-            kind: ExpressionKind.Value,
-            token: subtract,
-            value: {
-                kind: ValueKind.NumberLiteral,
-                token: subtract,
-                number: 0,
-            },
-        },
-        rhs: expression,
-    }
 }
 
 function parse_call(func: Expression, stream: TokenStream): Expression | Error
