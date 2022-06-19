@@ -19,6 +19,13 @@ test('Can create and call function', () =>
         end
 
         a = foo(1, 2)
+
+        function bar(single)
+            return 42
+        end
+
+        b = bar{ 1, 2 }
+        c = bar"Single Argument"
     `)
     expect(lua.run()).toBeUndefined()
 
@@ -30,6 +37,16 @@ test('Can create and call function', () =>
     const foo = lua.global('foo')
     expect(foo).not.toBeUndefined()
     expect(foo?.data_type).toBe(DataType.Function)
+
+    const b = lua.global('b')
+    expect(b).not.toBeUndefined()
+    expect(b?.data_type).toBe(DataType.Number)
+    expect(b?.number).toBe(42)
+
+    const c = lua.global('c')
+    expect(c).not.toBeUndefined()
+    expect(c?.data_type).toBe(DataType.Number)
+    expect(c?.number).toBe(42)
 })
 
 test('Locals are kept local', () =>

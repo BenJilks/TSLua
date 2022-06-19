@@ -253,6 +253,20 @@ function parse_dot(table: Expression, stream: TokenStream): Expression | Error
     }, stream)
 }
 
+function parse_single_argument_call(func: Expression, stream: TokenStream): Expression | Error
+{
+    const argument = parse_expression(stream)
+    if (argument instanceof Error)
+        return argument
+
+    return {
+        kind: ExpressionKind.Call,
+        token: func.token,
+        expression: func,
+        arguments: [argument],
+    }
+}
+
 function parse_access_expression(expression: Expression, stream: TokenStream): Expression | Error
 {
     switch (stream.peek().kind)
@@ -265,6 +279,10 @@ function parse_access_expression(expression: Expression, stream: TokenStream): E
         
         case TokenKind.Dot:
             return parse_dot(expression, stream)
+
+        case TokenKind.SquiglyOpen:
+        case TokenKind.StringLiteral:
+            return parse_single_argument_call(expression, stream)
     }
 
     return expression
