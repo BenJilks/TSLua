@@ -11,9 +11,9 @@ const UNARY = [
 ]
 
 const ORDERS = [
-    [TokenKind.And, TokenKind.Or],
-    [TokenKind.Equals, TokenKind.NotEquals],
-    [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals],
+    [TokenKind.Or],
+    [TokenKind.And],
+    [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals, TokenKind.Equals, TokenKind.NotEquals],
     [TokenKind.Concat],
     [TokenKind.Addition, TokenKind.Subtract],
     [TokenKind.Multiply, TokenKind.Division],
