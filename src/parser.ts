@@ -5,12 +5,12 @@ import { Value, ValueKind } from './ast'
 import { Token, TokenKind, TokenStream, token_kind_to_string } from './lexer'
 
 const ORDERS = [
-    [TokenKind.Multiply, TokenKind.Division],
-    [TokenKind.Addition, TokenKind.Subtract],
-    [TokenKind.Concat],
-    [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals],
-    [TokenKind.Equals, TokenKind.NotEquals],
     [TokenKind.And, TokenKind.Or],
+    [TokenKind.Equals, TokenKind.NotEquals],
+    [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals],
+    [TokenKind.Concat],
+    [TokenKind.Addition, TokenKind.Subtract],
+    [TokenKind.Multiply, TokenKind.Division],
 ]
 
 function error(token: Token, message: string): Error
@@ -134,15 +134,22 @@ function parse_value_expression(stream: TokenStream): Expression | Error
         return sub_expression
     }
 
+    if (stream.peek().kind == TokenKind.Not)
+        return parse_not_operation(stream)
+    if (stream.peek().kind == TokenKind.Subtract)
+        return parse_negate_operation(stream)
+
     const value = parse_value(stream)
     if (value instanceof Error)
         return value
 
-    return {
+    const expression_value = {
         kind: ExpressionKind.Value,
         token: value.token,
         value: value,
     }
+
+    return parse_access_expression(expression_value, stream)
 }
 
 function parse_not_operation(stream: TokenStream): Expression | Error
@@ -298,48 +305,37 @@ function operation_type_to_expression_kind(
 }
 
 function parse_operation(stream: TokenStream,
-                         lhs: Expression,
                          order: number): Expression | Error
 {
-    let result = lhs
+    if (order >= ORDERS.length)
+        return parse_value_expression(stream)
+
+    let lhs = parse_operation(stream, order + 1)
+    if (lhs instanceof Error)
+        return lhs
+
     while (ORDERS[order].includes(stream.peek().kind))
     {
         const operation_type = stream.next()
-        const rhs = parse_expression(stream, order)
+        const rhs = parse_operation(stream, order + 1)
         if (rhs instanceof Error)
             return rhs
 
         const expression_kind = operation_type_to_expression_kind(operation_type.kind)
-        result = {
+        lhs = {
             kind: expression_kind,
             token: operation_type,
-            lhs: result,
+            lhs: lhs,
             rhs: rhs,
         }
     }
 
-    if (order + 1 >= ORDERS.length)
-        return result
-    else
-        return parse_operation(stream, result, order + 1)
+    return lhs
 }
 
-function parse_expression(stream: TokenStream, order = 0): Expression | Error
+function parse_expression(stream: TokenStream): Expression | Error
 {
-    if (stream.peek().kind == TokenKind.Not)
-        return parse_not_operation(stream)
-    if (stream.peek().kind == TokenKind.Subtract)
-        return parse_negate_operation(stream)
-
-    const value = parse_value_expression(stream)
-    if (value instanceof Error)
-        return value
-
-    const expression = parse_access_expression(value, stream)
-    if (expression instanceof Error)
-        return expression
-
-    return parse_operation(stream, expression, order)
+    return parse_operation(stream, 0)
 }
 
 function parse_local_statement(local: Token, values: Expression[]): Statement | Error

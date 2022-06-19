@@ -1,4 +1,4 @@
-import { Lua } from '../index'
+import { Lua, DataType } from '../index'
 
 test('Basic error reporting', () =>
 {
@@ -7,10 +7,14 @@ test('Basic error reporting', () =>
             return a
         end
 
-        foo()
+        a = foo()
     `)
     
-    expect(lua.run()).toEqual(new Error('3:20: Lua value \'a\' is not defined'))
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).toBeDefined()
+    expect(a?.data_type).toBe(DataType.Nil)
 })
 
 test('Parsing errors', () =>

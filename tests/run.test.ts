@@ -236,13 +236,27 @@ test('Tables', () =>
 
 test('Sub-expressions', () =>
 {
-    const lua = new Lua('a = (1 + 2) * 2')
+    const lua = new Lua(`
+        a = 1 + 2 * 2
+        b = 2 * 2 + 1
+        c = 1 + 2 * 2 == 2 * 2 + 1 and true
+    `)
     expect(lua.run()).toBeUndefined()
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
     expect(a?.data_type).toBe(DataType.Number)
-    expect(a?.number).toBe(6)
+    expect(a?.number).toBe(5)
+
+    const b = lua.global('b')
+    expect(b).not.toBeUndefined()
+    expect(b?.data_type).toBe(DataType.Number)
+    expect(b?.number).toBe(5)
+
+    const c = lua.global('c')
+    expect(c).not.toBeUndefined()
+    expect(c?.data_type).toBe(DataType.Boolean)
+    expect(c?.boolean).toBe(true)
 })
 
 test('Break', () =>
