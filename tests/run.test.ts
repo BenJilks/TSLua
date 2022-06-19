@@ -227,9 +227,10 @@ test('All operators', () =>
 test('Tables', () =>
 {
     const lua = new Lua(`
-        table = { "a", "b", c = false }
+        table = { "a", "b", c = false, ["x" .. "y"] = "expr" }
         
         b = table[2]
+        c = table["xy"]
         table["test"] = 42
         table.d = true
     `)
@@ -239,6 +240,11 @@ test('Tables', () =>
     expect(b).not.toBeUndefined()
     expect(b?.data_type).toBe(DataType.String)
     expect(b?.string).toBe('b')
+
+    const c = lua.global('c')
+    expect(c).not.toBeUndefined()
+    expect(c?.data_type).toBe(DataType.String)
+    expect(c?.string).toBe('expr')
 
     const table = lua.global('table')
     expect(table).not.toBeUndefined()

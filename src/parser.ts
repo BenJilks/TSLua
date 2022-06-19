@@ -48,17 +48,50 @@ function consume(stream: TokenStream, kind: TokenKind): boolean
     return true
 }
 
+function parse_table_key(stream: TokenStream): Expression | Error
+{
+    if (consume(stream, TokenKind.OpenSquare))
+    {
+        const element = parse_expression(stream)
+        if (element instanceof Error)
+            return element
+
+        const close_square = expect(stream, TokenKind.CloseSquare)
+        if (close_square instanceof Error)
+            return close_square
+
+        return element
+    }
+
+    const value = parse_value(stream)
+    if (value instanceof Error)
+        return value
+
+    if (value.kind == ValueKind.Variable)
+    {
+        value.kind = ValueKind.StringLiteral
+        value.string = value.identifier
+        value.identifier = undefined
+    }
+
+    return {
+        kind: ExpressionKind.Value,
+        token: value.token,
+        value: value,
+    }
+}
+
 function parse_table(stream: TokenStream): Value | Error
 {
     const squigly_open = expect(stream, TokenKind.SquiglyOpen)
     if (squigly_open instanceof Error)
         return squigly_open
 
-    const elements: Map<Token, Expression> = new Map()
+    const elements: Map<Expression, Expression> = new Map()
     let current_numeric_key = 1
     while (stream.peek().kind != TokenKind.SquiglyClose)
     {
-        const element = parse_expression(stream)
+        const element = parse_table_key(stream)
         if (element instanceof Error)
             return element
 
@@ -68,16 +101,24 @@ function parse_table(stream: TokenStream): Value | Error
             if (value instanceof Error)
                 return value
 
-            if (element.kind != ExpressionKind.Value)
-                throw new Error()
-            elements.set(element.token, value)
+            elements.set(element, value)
         }
         else
         {
-            const key = {
+            const key_token = {
                 kind: TokenKind.NumberLiteral,
                 data: current_numeric_key.toString(),
                 debug: element.token.debug,
+            }
+
+            const key = {
+                kind: ExpressionKind.Value,
+                token: key_token,
+                value: {
+                    kind: ValueKind.NumberLiteral,
+                    token: key_token,
+                    number: current_numeric_key,
+                },
             }
 
             current_numeric_key += 1

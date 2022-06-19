@@ -346,7 +346,7 @@ export class Lua
                     const key = index(this.stack.pop())
                     const value = this.stack.pop() ?? nil
                     if (key == undefined)
-                        return error('Invalid key, must be a number of string')
+                        return error('Invalid key, must be a number or string')
 
                     table.table.set(key, value)
                 }

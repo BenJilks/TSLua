@@ -2,7 +2,7 @@ import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, 
 import { Value, ValueKind } from './ast'
 import { Op, OpCode } from './opcode'
 import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
-import { Token, TokenKind } from './lexer'
+import { Token } from './lexer'
 
 function compile_function(chunk: Chunk, token: Token, parameters: Token[], functions: Op[][]): number
 {
@@ -61,10 +61,7 @@ function compile_value(value: Value | undefined, functions: Op[][]): Op[]
             for (const [key, expression] of [...value.table?.entries() ?? []].reverse())
             {
                 output.push(...compile_expression(expression, functions))
-                if (key.kind == TokenKind.NumberLiteral)
-                    output.push({ code: OpCode.Push, arg: make_number(parseFloat(key.data)), debug: key.debug })
-                else 
-                    output.push({ code: OpCode.Push, arg: make_string(key.data), debug: key.debug })
+                output.push(...compile_expression(key, functions))
             }
 
             output.push({ code: OpCode.StoreIndex, arg: make_number(value.table?.size ?? 0), debug: debug })

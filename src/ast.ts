@@ -22,7 +22,7 @@ export interface Value {
     number?: number,
     boolean?: boolean,
     string?: string,
-    table?: Map<Token, Expression>,
+    table?: Map<Expression, Expression>,
     function?: LuaFunction,
     identifier?: string,
 }
