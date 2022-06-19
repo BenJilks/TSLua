@@ -276,36 +276,31 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     if (if_block == undefined)
         throw new Error()
 
-    const else_chunk: Op[] = []
-    if (if_block.else_body != undefined)
-        else_chunk.push(...compile_chunk(if_block.else_body, functions))
-
-    const if_else_chunks: Op[][] = []
-    for (const { body, condition, token } of if_block.else_if_bodies.reverse())
-    {
-        const ops: Op[] = []
-        const if_else_body = compile_chunk(body, functions)
-        ops.push(...compile_expression(condition, functions))
-        ops.push({ code: OpCode.JumpIfNot, arg: make_number(if_else_body.length + 1), debug: token.debug })
-        ops.push(...if_else_body)
-
-        const offset = if_else_chunks.reduce((acc, chunk) => chunk.length + acc, 0) + else_chunk.length
-        ops.push({ code: OpCode.Jump, arg: make_number(offset), debug: token.debug })
-        if_else_chunks.push(ops)
-    }
+    const if_else_bodies = if_block.else_if_bodies
+        .map(({ body }) => compile_chunk(body, functions))
+    const else_body = if_block.else_body ? compile_chunk(if_block.else_body, functions) : []
 
     const debug = if_block.token.debug
     const ops: Op[] = []
     const body = compile_chunk(if_block.body, functions)
     ops.push(...compile_expression(if_block.condition, functions))
-    ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + 1), debug: debug })
+    ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length), debug: debug })
+    ops.push({ code: OpCode.Jump, arg: make_number(if_else_bodies.reduce((body, acc) => acc + body.length, 0)), debug: debug })
     ops.push(...body)
 
-    const offset = if_else_chunks.reduce((acc, chunk) => chunk.length + acc, 0) + else_chunk.length
-    ops.push({ code: OpCode.Jump, arg: make_number(offset), debug: debug })
-    for (const if_else_chunk of if_else_chunks)
-        ops.push(...if_else_chunk)
-    ops.push(...else_chunk)
+    for (const { body, condition, token } of if_block.else_if_bodies)
+    {
+        const if_else_body = compile_chunk(body, functions)
+        ops.push(...compile_expression(condition, functions))
+        ops.push({ code: OpCode.JumpIfNot, arg: make_number(if_else_body.length), debug: token.debug })
+        ops.push(...if_else_body)
+    }
+
+    if (if_block.else_body != undefined)
+    {
+        const else_body = compile_chunk(if_block.else_body, functions)
+        ops.push(...else_body)
+    }
 
     return ops
 }

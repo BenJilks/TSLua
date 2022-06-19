@@ -315,7 +315,7 @@ test('Comments', () =>
     expect(a?.number).toBe(1)
 })
 
-test('If else', () =>
+test('If, ElseIf and Else', () =>
 {
     const lua = new Lua(`
         if true then
@@ -328,6 +328,16 @@ test('If else', () =>
             b = 1
         else
             b = 2
+        end
+
+        if 1 > 2 then
+            c = 1
+        elseif 1 < 2 then
+            c = 2
+        elseif true then
+            c = 3
+        else
+            c = 4
         end
     `)
     expect(lua.run()).toBeUndefined()

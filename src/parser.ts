@@ -1,4 +1,4 @@
-import { Chunk } from './ast'
+import { Chunk, IfElseBlock } from './ast'
 import { Expression, ExpressionKind } from './ast'
 import { Statement, StatementKind } from './ast'
 import { Value, ValueKind } from './ast'
@@ -465,26 +465,51 @@ function parse_if(stream: TokenStream): Statement | Error
     if (then instanceof Error)
         return then
     
-    const body = parse(stream, TokenKind.Else, TokenKind.End)
+    const body = parse(stream, TokenKind.Else, TokenKind.ElseIf, TokenKind.End)
     if (body instanceof Error)
         return body
 
+    const else_if_bodies: IfElseBlock[] = []
     let else_body: Chunk | undefined = undefined
-    const end = stream.next()
-    if (end.kind == TokenKind.Else)
+    while (consume(stream, TokenKind.ElseIf))
+    {
+        const condition = parse_expression(stream)
+        if (condition instanceof Error)
+            return condition
+        
+        const then = expect(stream, TokenKind.Then)
+        if (then instanceof Error)
+            return then
+
+        const chunk = parse(stream, TokenKind.End, TokenKind.ElseIf, TokenKind.Else)
+        if (chunk instanceof Error)
+            return chunk
+
+        else_if_bodies.push({
+            body: chunk,
+            condition: condition,
+            token: then,
+        })
+    }
+
+    if (consume(stream, TokenKind.Else))
     {
         const chunk = parse(stream, TokenKind.End)
         if (chunk instanceof Error)
             return chunk
-        consume(stream, TokenKind.End)
         else_body = chunk
     }
     
+    const end = expect(stream, TokenKind.End)
+    if (end instanceof Error)
+        return end
+
     return {
         kind: StatementKind.If,
         if: {
             condition: condition,
             body: body,
+            else_if_bodies: else_if_bodies,
             else_body: else_body,
             token: if_token,
         },

@@ -73,9 +73,16 @@ export interface Local {
     token: Token,
 }
 
+export interface IfElseBlock {
+    body: Chunk,
+    condition: Expression,
+    token: Token,
+}
+
 export interface IfBlock {
     condition: Expression,
     body: Chunk,
+    else_if_bodies: IfElseBlock[],
     else_body?: Chunk,
     token: Token,
 }
