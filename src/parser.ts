@@ -822,6 +822,10 @@ function parse_statement(stream: TokenStream, end_tokens: TokenKind[]): Statemen
     switch (token.kind)
     {
         case TokenKind.Identifier:
+        case TokenKind.NilLiteral:
+        case TokenKind.StringLiteral:
+        case TokenKind.NumberLiteral:
+        case TokenKind.BooleanLiteral:
         case TokenKind.Local:
             return parse_assign_or_expression(stream)
         case TokenKind.Return:
@@ -836,6 +840,9 @@ function parse_statement(stream: TokenStream, end_tokens: TokenKind[]): Statemen
             return parse_for(stream)
         case TokenKind.Function:
             return parse_function(stream)
+        case TokenKind.Semicolon:
+            stream.next()
+            return { kind: StatementKind.Empty }
         default:
             if (end_tokens.includes(token.kind))
                 return undefined

@@ -445,3 +445,25 @@ test('String escapes', () =>
     expect(b?.string).toContain('Multi-line strings')
 })
 
+test('Semi-colon seperation', () =>
+{
+    const lua = new Lua(`
+        function foo(arg)
+            return arg
+        end
+
+        a = foo "a"
+        b = foo ; "b"
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.String)
+    expect(a?.string).toBe('a')
+
+    const b = lua.global('b')
+    expect(b).not.toBeUndefined()
+    expect(b?.data_type).toBe(DataType.Function)
+})
+

@@ -445,6 +445,8 @@ function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
     {
         switch (statement.kind)
         {
+            case StatementKind.Empty:
+                break
             case StatementKind.Expression:
                 ops.push(...compile_expression(statement.expression, functions))
                 if (statement.expression != undefined)

@@ -118,6 +118,7 @@ export interface Return {
 
 export enum StatementKind {
     Invalid,
+    Empty,
     Expression,
     Assignment,
     Local,
