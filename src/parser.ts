@@ -701,6 +701,34 @@ function parse_for(stream: TokenStream): Statement | Error
     }
 }
 
+function parse_repeat(stream: TokenStream): Statement | Error
+{
+    const repeat_token = expect(stream, TokenKind.Repeat)
+    if (repeat_token instanceof Error)
+        return repeat_token
+
+    const body = parse(stream, TokenKind.Until)
+    if (body instanceof Error)
+        return body
+
+    const until_token = expect(stream, TokenKind.Until)
+    if (until_token instanceof Error)
+        return until_token
+
+    const condition = parse_expression(stream)
+    if (condition instanceof Error)
+        return condition
+    
+    return {
+        kind: StatementKind.Repeat,
+        repeat: {
+            body: body,
+            condition: condition,
+            token: repeat_token,
+        },
+    }
+}
+
 function parse_function_params(stream: TokenStream): Token[] | Error
 {
     const open_brace = expect(stream, TokenKind.OpenBrace)
@@ -855,6 +883,8 @@ function parse_statement(stream: TokenStream, end_tokens: TokenKind[]): Statemen
             return parse_while(stream)
         case TokenKind.For:
             return parse_for(stream)
+        case TokenKind.Repeat:
+            return parse_repeat(stream)
         case TokenKind.Function:
             return parse_function(stream)
         case TokenKind.Semicolon:

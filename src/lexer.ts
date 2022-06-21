@@ -63,11 +63,13 @@ export enum TokenKind {
     If,
     While,
     For,
+    Repeat,
     In,
     Do,
     Then,
     ElseIf,
     Else,
+    Until,
     End,
     Return,
     Break,
@@ -115,11 +117,13 @@ export function token_kind_to_string(kind: TokenKind)
         case TokenKind.If: return 'if'
         case TokenKind.While: return 'while'
         case TokenKind.For: return 'for'
+        case TokenKind.Repeat: return 'repeat'
         case TokenKind.In: return 'in'
         case TokenKind.Do: return 'do'
         case TokenKind.Then: return 'then'
         case TokenKind.ElseIf: return 'elseif'
         case TokenKind.Else: return 'else'
+        case TokenKind.Until: return 'until'
         case TokenKind.End: return 'end'
         case TokenKind.Return: return 'return'
         case TokenKind.Break: return 'break'
@@ -182,11 +186,13 @@ const keyword_map: Map<string, TokenKind> = new Map([
     ['if', TokenKind.If],
     ['while', TokenKind.While],
     ['for', TokenKind.For],
+    ['repeat', TokenKind.Repeat],
     ['in', TokenKind.In],
     ['do', TokenKind.Do],
     ['then', TokenKind.Then],
     ['elseif', TokenKind.ElseIf],
     ['else', TokenKind.Else],
+    ['until', TokenKind.Until],
     ['end', TokenKind.End],
     ['return', TokenKind.Return],
     ['break', TokenKind.Break],

@@ -489,3 +489,23 @@ test('Semi-colon seperation', () =>
     expect(b?.data_type).toBe(DataType.Function)
 })
 
+test('Repeat statement', () =>
+{
+    const lua = new Lua(`
+        i = 0
+        repeat
+            i = i + 1
+        until i > 2
+
+        repeat
+            i = i - 1
+        until true
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const i = lua.global('i')
+    expect(i).not.toBeUndefined()
+    expect(i?.data_type).toBe(DataType.Number)
+    expect(i?.number).toBe(2)
+})
+

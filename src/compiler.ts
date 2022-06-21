@@ -1,4 +1,4 @@
-import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local, NumericFor } from './ast'
+import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local, NumericFor, Repeat } from './ast'
 import { Value, ValueKind } from './ast'
 import { Op, OpCode } from './opcode'
 import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
@@ -441,6 +441,19 @@ function compile_numeric_for(numeric_for_block: NumericFor | undefined, function
     return ops
 }
 
+function compile_repeat(repeat: Repeat | undefined, functions: Op[][]): Op[]
+{
+    if (repeat == undefined)
+        throw new Error()
+
+    const ops: Op[] = []
+    const debug = repeat.token.debug
+    ops.push(...compile_chunk(repeat.body, functions))
+    ops.push(...compile_expression(repeat.condition, functions))
+    ops.push({ code: OpCode.JumpIfNot, arg: make_number(-ops.length - 1), debug: debug })
+    return ops
+}
+
 function compile_return(return_block: Return | undefined, functions: Op[][]): Op[]
 {
     if (return_block == undefined)
@@ -488,6 +501,9 @@ function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
                 break
             case StatementKind.NumericFor:
                 ops.push(...compile_numeric_for(statement.numeric_for, functions))
+                break
+            case StatementKind.Repeat:
+                ops.push(...compile_repeat(statement.repeat, functions))
                 break
             case StatementKind.Return:
                 ops.push(...compile_return(statement.return, functions))
