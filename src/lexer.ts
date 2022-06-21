@@ -38,6 +38,12 @@ export enum TokenKind {
     Concat,
     Hash,
 
+    BitAnd,
+    BitOr,
+    BitXOrNot,
+    BitShiftLeft,
+    BitShiftRight,
+
     Equals,
     NotEquals,
     LessThen,
@@ -88,7 +94,15 @@ export function token_kind_to_string(kind: TokenKind)
         case TokenKind.Subtract: return '-'
         case TokenKind.Multiply: return '*'
         case TokenKind.Division: return '/'
-        case TokenKind.LessThen: return '-'
+        case TokenKind.FloorDivision: return '//'
+        case TokenKind.Modulo: return '%'
+        case TokenKind.Exponent: return '^'
+        case TokenKind.BitAnd: return '&'
+        case TokenKind.BitOr: return '|'
+        case TokenKind.BitXOrNot: return '~'
+        case TokenKind.BitShiftLeft: return '<<'
+        case TokenKind.BitShiftRight: return '>>'
+        case TokenKind.LessThen: return '<'
         case TokenKind.GreaterThen: return '>'
         case TokenKind.And: return 'and'
         case TokenKind.Or: return 'or'
@@ -138,6 +152,9 @@ const single_token_map: Map<string, TokenKind> = new Map([
     ['/', TokenKind.Division],
     ['%', TokenKind.Modulo],
     ['^', TokenKind.Exponent],
+    ['&', TokenKind.BitAnd],
+    ['|', TokenKind.BitOr],
+    ['~', TokenKind.BitXOrNot],
 
     ['<', TokenKind.LessThen],
     ['>', TokenKind.GreaterThen],
@@ -156,6 +173,8 @@ const double_token_map: Map<string, TokenKind> = new Map([
     ['~=', TokenKind.NotEquals],
     ['..', TokenKind.Concat],
     ['//', TokenKind.FloorDivision],
+    ['<<', TokenKind.BitShiftLeft],
+    ['>>', TokenKind.BitShiftRight],
 ])
 
 const keyword_map: Map<string, TokenKind> = new Map([

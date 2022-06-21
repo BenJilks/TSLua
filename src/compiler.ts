@@ -173,6 +173,17 @@ function compile_expression(expression: Expression | undefined, functions: Op[][
         case ExpressionKind.Concat:
             return compile_operation(expression, OpCode.Concat, functions)
 
+        case ExpressionKind.BitAnd:
+            return compile_operation(expression, OpCode.BitAnd, functions)
+        case ExpressionKind.BitOr:
+            return compile_operation(expression, OpCode.BitOr, functions)
+        case ExpressionKind.BitXOr:
+            return compile_operation(expression, OpCode.BitXOr, functions)
+        case ExpressionKind.BitShiftLeft:
+            return compile_operation(expression, OpCode.BitShiftLeft, functions)
+        case ExpressionKind.BitShiftRight:
+            return compile_operation(expression, OpCode.BitShiftRight, functions)
+
         case ExpressionKind.Equals:
             return compile_operation(expression, OpCode.Equals, functions)
         case ExpressionKind.NotEquals:
@@ -196,6 +207,8 @@ function compile_expression(expression: Expression | undefined, functions: Op[][
             return compile_unary_operation(expression, OpCode.Negate, functions)
         case ExpressionKind.Length:
             return compile_unary_operation(expression, OpCode.Length, functions)
+        case ExpressionKind.BitNot:
+            return compile_unary_operation(expression, OpCode.BitNot, functions)
 
         default:
             throw new Error()

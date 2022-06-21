@@ -40,6 +40,13 @@ export enum ExpressionKind {
     Modulo,
     Exponent,
     Concat,
+
+    BitAnd,
+    BitOr,
+    BitXOr,
+    BitNot,
+    BitShiftLeft,
+    BitShiftRight,
     
     Equals,
     NotEquals,

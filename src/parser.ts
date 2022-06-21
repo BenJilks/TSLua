@@ -18,6 +18,8 @@ const ORDERS = [
     [TokenKind.Addition, TokenKind.Subtract],
     [TokenKind.Multiply, TokenKind.Division, TokenKind.FloorDivision, TokenKind.Modulo],
     [TokenKind.Exponent],
+    [TokenKind.BitShiftLeft, TokenKind.BitShiftRight],
+    [TokenKind.BitAnd, TokenKind.BitOr, TokenKind.BitXOrNot],
 ]
 
 function error(token: Token, message: string): Error
@@ -174,6 +176,7 @@ function unary_type_to_expression_kind(kind: TokenKind): ExpressionKind
         case TokenKind.Not: return ExpressionKind.Not
         case TokenKind.Subtract: return ExpressionKind.Negate
         case TokenKind.Hash: return ExpressionKind.Length
+        case TokenKind.BitXOrNot: return ExpressionKind.BitNot
         default:
             throw new Error()
     }
@@ -343,6 +346,11 @@ function operation_type_to_expression_kind(
         case TokenKind.Modulo: return ExpressionKind.Modulo
         case TokenKind.Exponent: return ExpressionKind.Exponent
         case TokenKind.Concat: return ExpressionKind.Concat
+        case TokenKind.BitAnd: return ExpressionKind.BitAnd
+        case TokenKind.BitOr: return ExpressionKind.BitOr
+        case TokenKind.BitXOrNot: return ExpressionKind.BitXOr
+        case TokenKind.BitShiftLeft: return ExpressionKind.BitShiftLeft
+        case TokenKind.BitShiftRight: return ExpressionKind.BitShiftRight
         case TokenKind.LessThen: return ExpressionKind.LessThen
         case TokenKind.LessThenEquals: return ExpressionKind.LessThenEquals
         case TokenKind.GreaterThen: return ExpressionKind.GreaterThen
@@ -387,6 +395,9 @@ function parse_operation(stream: TokenStream,
 
 function parse_expression(stream: TokenStream): Expression | Error
 {
+    if (stream.peek().kind == TokenKind.BitXOrNot)
+        return parse_unary_operator(stream)
+
     return parse_operation(stream, 0)
 }
 

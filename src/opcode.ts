@@ -22,6 +22,13 @@ export enum OpCode {
     Exponent,
     Concat,
 
+    BitAnd,
+    BitOr,
+    BitXOr,
+    BitNot,
+    BitShiftLeft,
+    BitShiftRight,
+
     Equals,
     NotEquals,
     LessThen,
@@ -72,6 +79,12 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Modulo: return 'Modulo'
         case OpCode.Exponent: return 'Exponent'
         case OpCode.Concat: return 'Concat'
+        case OpCode.BitAnd: return 'BitAnd'
+        case OpCode.BitOr: return 'BitOr'
+        case OpCode.BitXOr: return 'BitXOr'
+        case OpCode.BitNot: return 'BitNot'
+        case OpCode.BitShiftLeft: return 'BitShiftLeft'
+        case OpCode.BitShiftRight: return 'BitShiftRight'
         case OpCode.Equals: return 'Equals'
         case OpCode.NotEquals: return 'NotEquals'
         case OpCode.LessThen: return 'LessThen'

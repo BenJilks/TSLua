@@ -263,6 +263,12 @@ export class Lua
             case OpCode.GreaterThen: this.compair((x, y) => x > y); break
             case OpCode.GreaterThenEquals: this.compair((x, y) => x >= y); break
 
+            case OpCode.BitAnd: this.operation((x, y) => x & y); break
+            case OpCode.BitOr: this.operation((x, y) => x | y); break
+            case OpCode.BitXOr: this.operation((x, y) => x ^ y); break
+            case OpCode.BitShiftLeft: this.operation((x, y) => x << y); break
+            case OpCode.BitShiftRight: this.operation((x, y) => x >> y); break
+
             case OpCode.Concat:
             {
                 const x = std.variable_to_string(this.stack.pop() ?? nil)
@@ -300,6 +306,7 @@ export class Lua
             }
 
             case OpCode.Not: this.stack.push(make_boolean(!is_true(this.stack.pop()))); break
+            case OpCode.BitNot: this.stack.push(make_number(~(this.stack.pop()?.number ?? 0))); break
             case OpCode.Negate: this.stack.push(make_number(-(this.stack.pop()?.number ?? 0))); break
             case OpCode.IsNil: this.stack.push(make_boolean((this.stack.pop() ?? nil) == nil)); break
             case OpCode.Jump: this.ip += arg?.number ?? 0; break

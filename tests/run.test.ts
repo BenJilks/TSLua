@@ -191,6 +191,13 @@ test('All operators', () =>
         m = 3 // 2
         n = 6 % 3
         o = 4 ^ 2
+
+        p = 2 & 3
+        q = 2 | 3
+        r = 2 ~ 3
+        s = 2 >> 1
+        t = 2 << 1
+        u = ~2
     `)
     expect(lua.run()).toBeUndefined()
 
@@ -230,6 +237,13 @@ test('All operators', () =>
     is_number('m', 1)
     is_number('n', 0)
     is_number('o', 16)
+
+    is_number('p', 2)
+    is_number('q', 3)
+    is_number('r', 1)
+    is_number('s', 1)
+    is_number('t', 4)
+    is_number('u', -3)
 })
 
 test('Tables', () =>
