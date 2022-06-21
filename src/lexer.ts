@@ -3,6 +3,7 @@ export enum State {
     Initial,
     Identifier,
     StringLiteral,
+    StringLiteralEscape,
     NumberLiteral,
     NumberLiteralDot,
     NumberLiteralExpSign,
@@ -346,28 +347,68 @@ export class Lexer
         }
     }
 
-    private *read_until(condition: (c: string) => boolean,
-                        kind: TokenKind,
-                        should_consume_last: boolean)
+    private *read_string()
     {
         const c = this.current()
-        if (!condition(c))
+        this.consume()
+
+        if (c == '"')
         {
-            this.buffer += c
-            this.consume()
+            yield {
+                data: this.buffer,
+                kind: TokenKind.StringLiteral,
+                debug: this.token_start_debug,
+            }
+
+            this.state = State.Initial
             return
         }
 
-        yield this.token({
-            data: this.buffer,
-            kind: kind,
-            debug: this.token_start_debug,
-        })
+        if (c == '\\')
+        {
+            this.state = State.StringLiteralEscape
+            return
+        }
 
-        if (should_consume_last)
-            this.consume()
+        this.buffer += c
+    }
 
-        this.state = State.Initial
+    private read_string_escape()
+    {
+        const c = this.current()
+        this.consume()
+        this.state = State.StringLiteral
+
+        switch (c)
+        {
+            case 'n': this.buffer += '\n'; break
+            case '0': this.buffer += '\0'; break
+            case 'r': this.buffer += '\r'; break
+            case 't': this.buffer += '\t'; break
+            case 'e': this.buffer += '\e'; break
+            default:
+                this.buffer += c
+                break
+        }
+    }
+
+    private *read_identifier()
+    {
+        const c = this.current()
+        if (!/[a-zA-Z0-9_]/.test(c))
+        {
+            yield this.token({
+                data: this.buffer,
+                kind: TokenKind.Identifier,
+                debug: this.token_start_debug,
+            })
+
+            this.state = State.Initial
+            return
+        }
+
+        this.buffer += c
+        this.consume()
     }
 
     private *number()
@@ -484,10 +525,13 @@ export class Lexer
                 yield* this.initial()
                 break
             case State.Identifier:
-                yield* this.read_until(c => !/[a-zA-Z0-9_]/.test(c), TokenKind.Identifier, false)
+                yield* this.read_identifier()
                 break
             case State.StringLiteral:
-                yield* this.read_until(c => c == '"', TokenKind.StringLiteral, true)
+                yield* this.read_string()
+                break
+            case State.StringLiteralEscape:
+                this.read_string_escape()
                 break
             case State.NumberLiteral:
 			    yield* this.number()

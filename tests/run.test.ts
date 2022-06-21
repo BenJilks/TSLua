@@ -424,3 +424,16 @@ test('Local to block', () =>
     expect(a?.number).toBe(1)
 })
 
+test('String escapes', () =>
+{
+    const lua = new Lua(`
+        a = "This\\nString\\tContains\\"escapes\\""
+    `)
+    expect(lua.run()).toBeUndefined()
+
+    const a = lua.global('a')
+    expect(a).not.toBeUndefined()
+    expect(a?.data_type).toBe(DataType.String)
+    expect(a?.string).toBe('This\nString\tContains"escapes"')
+})
+
