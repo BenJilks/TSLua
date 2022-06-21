@@ -1,4 +1,4 @@
-import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local, NumericFor, Repeat } from './ast'
+import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local, NumericFor, Repeat, Do } from './ast'
 import { Value, ValueKind } from './ast'
 import { Op, OpCode } from './opcode'
 import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
@@ -448,9 +448,26 @@ function compile_repeat(repeat: Repeat | undefined, functions: Op[][]): Op[]
 
     const ops: Op[] = []
     const debug = repeat.token.debug
+    ops.push({ code: OpCode.StartBlock, debug: debug })
+
     ops.push(...compile_chunk(repeat.body, functions))
     ops.push(...compile_expression(repeat.condition, functions))
-    ops.push({ code: OpCode.JumpIfNot, arg: make_number(-ops.length - 1), debug: debug })
+    ops.push({ code: OpCode.JumpIfNot, arg: make_number(-ops.length), debug: debug })
+
+    ops.push({ code: OpCode.EndBlock, debug: debug })
+    return ops
+}
+
+function compile_do(do_block: Do | undefined, functions: Op[][]): Op[]
+{
+    if (do_block == undefined)
+        throw new Error()
+
+    const ops: Op[] = []
+    const debug = do_block.token.debug
+    ops.push({ code: OpCode.StartBlock, debug: debug })
+    ops.push(...compile_chunk(do_block.body, functions))
+    ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops
 }
 
@@ -504,6 +521,9 @@ function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
                 break
             case StatementKind.Repeat:
                 ops.push(...compile_repeat(statement.repeat, functions))
+                break
+            case StatementKind.Do:
+                ops.push(...compile_do(statement.do, functions))
                 break
             case StatementKind.Return:
                 ops.push(...compile_return(statement.return, functions))

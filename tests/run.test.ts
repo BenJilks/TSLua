@@ -61,6 +61,11 @@ test('Locals are kept local', () =>
 
         local w = 4
         a = foo(1, 2)
+
+        do
+            local x
+            x = 1
+        end
     `)
     expect(lua.run()).toBeUndefined()
 

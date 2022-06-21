@@ -113,18 +113,23 @@ export interface For {
     token: Token,
 }
 
-export interface Repeat {
-    body: Chunk,
-    condition: Expression,
-    token: Token,
-}
-
 export interface NumericFor {
     index: Token,
     start: Expression,
     end: Expression,
     step: Expression | undefined,
     body: Chunk,
+}
+
+export interface Repeat {
+    body: Chunk,
+    condition: Expression,
+    token: Token,
+}
+
+export interface Do {
+    body: Chunk,
+    token: Token,
 }
 
 export interface Return {
@@ -141,8 +146,9 @@ export enum StatementKind {
     If,
     While,
     For,
-    Repeat,
     NumericFor,
+    Repeat,
+    Do,
     Return,
     Break,
 }
@@ -155,8 +161,9 @@ export interface Statement {
     if?: IfBlock,
     while?: While,
     for?: For,
-    repeat?: Repeat,
     numeric_for?: NumericFor,
+    repeat?: Repeat,
+    do?: Do,
     return?: Return,
 }
 
