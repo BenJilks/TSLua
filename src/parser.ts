@@ -14,12 +14,14 @@ const ORDERS = [
     [TokenKind.Or],
     [TokenKind.And],
     [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals, TokenKind.Equals, TokenKind.NotEquals],
+    [TokenKind.BitOr],
+    [TokenKind.BitAnd],
+    [TokenKind.BitXOrNot],
+    [TokenKind.BitShiftLeft, TokenKind.BitShiftRight],
     [TokenKind.Concat],
     [TokenKind.Addition, TokenKind.Subtract],
     [TokenKind.Multiply, TokenKind.Division, TokenKind.FloorDivision, TokenKind.Modulo],
     [TokenKind.Exponent],
-    [TokenKind.BitShiftLeft, TokenKind.BitShiftRight],
-    [TokenKind.BitAnd, TokenKind.BitOr, TokenKind.BitXOrNot],
 ]
 
 function error(token: Token, message: string): Error
