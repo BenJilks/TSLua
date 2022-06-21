@@ -255,6 +255,9 @@ export class Lua
             case OpCode.Subtract: this.operation((x, y) => x - y); break
             case OpCode.Multiply: this.operation((x, y) => x * y); break
             case OpCode.Divide: this.operation((x, y) => x / y); break
+            case OpCode.FloorDivide: this.operation((x, y) => Math.floor(x / y)); break
+            case OpCode.Modulo: this.operation((x, y) => x % y); break
+            case OpCode.Exponent: this.operation((x, y) => Math.pow(x, y)); break
             case OpCode.LessThen: this.compair((x, y) => x < y); break
             case OpCode.LessThenEquals: this.compair((x, y) => x <= y); break
             case OpCode.GreaterThen: this.compair((x, y) => x > y); break

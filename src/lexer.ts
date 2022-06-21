@@ -32,6 +32,9 @@ export enum TokenKind {
     Subtract,
     Multiply,
     Division,
+    FloorDivision,
+    Modulo,
+    Exponent,
     Concat,
     Hash,
 
@@ -133,6 +136,8 @@ const single_token_map: Map<string, TokenKind> = new Map([
     ['-', TokenKind.Subtract],
     ['*', TokenKind.Multiply],
     ['/', TokenKind.Division],
+    ['%', TokenKind.Modulo],
+    ['^', TokenKind.Exponent],
 
     ['<', TokenKind.LessThen],
     ['>', TokenKind.GreaterThen],
@@ -150,6 +155,7 @@ const double_token_map: Map<string, TokenKind> = new Map([
     ['<=', TokenKind.GreaterThenEquals],
     ['~=', TokenKind.NotEquals],
     ['..', TokenKind.Concat],
+    ['//', TokenKind.FloorDivision],
 ])
 
 const keyword_map: Map<string, TokenKind> = new Map([

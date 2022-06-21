@@ -36,6 +36,9 @@ export enum ExpressionKind {
     Subtract,
     Multiplication,
     Division,
+    FloorDivision,
+    Modulo,
+    Exponent,
     Concat,
     
     Equals,

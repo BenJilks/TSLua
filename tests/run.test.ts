@@ -187,6 +187,10 @@ test('All operators', () =>
         j = "test" == "test"
         k = "test" ~= "test"
         l = "test" .. "test"
+
+        m = 3 // 2
+        n = 6 % 3
+        o = 4 ^ 2
     `)
     expect(lua.run()).toBeUndefined()
 
@@ -222,6 +226,10 @@ test('All operators', () =>
     expect(l).not.toBeUndefined()
     expect(l?.data_type).toBe(DataType.String)
     expect(l?.string).toBe('testtest')
+
+    is_number('m', 1)
+    is_number('n', 0)
+    is_number('o', 16)
 })
 
 test('Tables', () =>

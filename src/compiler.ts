@@ -164,6 +164,12 @@ function compile_expression(expression: Expression | undefined, functions: Op[][
             return compile_operation(expression, OpCode.Multiply, functions)
         case ExpressionKind.Division:
             return compile_operation(expression, OpCode.Divide, functions)
+        case ExpressionKind.FloorDivision:
+            return compile_operation(expression, OpCode.FloorDivide, functions)
+        case ExpressionKind.Modulo:
+            return compile_operation(expression, OpCode.Modulo, functions)
+        case ExpressionKind.Exponent:
+            return compile_operation(expression, OpCode.Exponent, functions)
         case ExpressionKind.Concat:
             return compile_operation(expression, OpCode.Concat, functions)
 

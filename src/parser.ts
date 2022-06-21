@@ -16,7 +16,8 @@ const ORDERS = [
     [TokenKind.LessThen, TokenKind.LessThenEquals, TokenKind.GreaterThen, TokenKind.GreaterThenEquals, TokenKind.Equals, TokenKind.NotEquals],
     [TokenKind.Concat],
     [TokenKind.Addition, TokenKind.Subtract],
-    [TokenKind.Multiply, TokenKind.Division],
+    [TokenKind.Multiply, TokenKind.Division, TokenKind.FloorDivision, TokenKind.Modulo],
+    [TokenKind.Exponent],
 ]
 
 function error(token: Token, message: string): Error
@@ -338,6 +339,9 @@ function operation_type_to_expression_kind(
         case TokenKind.Subtract: return ExpressionKind.Subtract
         case TokenKind.Multiply: return ExpressionKind.Multiplication
         case TokenKind.Division: return ExpressionKind.Division
+        case TokenKind.FloorDivision: return ExpressionKind.FloorDivision
+        case TokenKind.Modulo: return ExpressionKind.Modulo
+        case TokenKind.Exponent: return ExpressionKind.Exponent
         case TokenKind.Concat: return ExpressionKind.Concat
         case TokenKind.LessThen: return ExpressionKind.LessThen
         case TokenKind.LessThenEquals: return ExpressionKind.LessThenEquals

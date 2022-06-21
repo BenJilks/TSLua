@@ -17,6 +17,9 @@ export enum OpCode {
     Subtract,
     Multiply,
     Divide,
+    FloorDivide,
+    Modulo,
+    Exponent,
     Concat,
 
     Equals,
@@ -65,6 +68,9 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Subtract: return 'Subtract'
         case OpCode.Multiply: return 'Multiply'
         case OpCode.Divide: return 'Divide'
+        case OpCode.FloorDivide: return 'FloorDivide'
+        case OpCode.Modulo: return 'Modulo'
+        case OpCode.Exponent: return 'Exponent'
         case OpCode.Concat: return 'Concat'
         case OpCode.Equals: return 'Equals'
         case OpCode.NotEquals: return 'NotEquals'
