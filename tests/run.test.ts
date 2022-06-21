@@ -428,6 +428,9 @@ test('String escapes', () =>
 {
     const lua = new Lua(`
         a = "This\\nString\\tContains\\"escapes\\""
+        b = [[
+            Multi-line strings
+        ]]
     `)
     expect(lua.run()).toBeUndefined()
 
@@ -435,5 +438,10 @@ test('String escapes', () =>
     expect(a).not.toBeUndefined()
     expect(a?.data_type).toBe(DataType.String)
     expect(a?.string).toBe('This\nString\tContains"escapes"')
+
+    const b = lua.global('b')
+    expect(b).not.toBeUndefined()
+    expect(b?.data_type).toBe(DataType.String)
+    expect(b?.string).toContain('Multi-line strings')
 })
 

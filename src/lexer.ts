@@ -4,6 +4,7 @@ export enum State {
     Identifier,
     StringLiteral,
     StringLiteralEscape,
+    MultiLineString,
     NumberLiteral,
     NumberLiteralDot,
     NumberLiteralExpSign,
@@ -292,6 +293,15 @@ export class Lexer
                 return
             }
 
+            if (double == '[[')
+            {
+                this.state = State.MultiLineString
+                this.start_token()
+                this.consume()
+                this.consume()
+                return
+            }
+
             const dobule_token_type = double_token_map.get(double)
             if (dobule_token_type != undefined)
             {
@@ -390,6 +400,27 @@ export class Lexer
                 this.buffer += c
                 break
         }
+    }
+
+    private *read_multi_line_string()
+    {
+        const c = this.current()
+        this.consume()
+
+        if (c + this.current() == ']]')
+        {
+            yield {
+                data: this.buffer,
+                kind: TokenKind.StringLiteral,
+                debug: this.token_start_debug,
+            }
+
+            this.consume()
+            this.state = State.Initial
+            return
+        }
+
+        this.buffer += c
     }
 
     private *read_identifier()
@@ -532,6 +563,9 @@ export class Lexer
                 break
             case State.StringLiteralEscape:
                 this.read_string_escape()
+                break
+            case State.MultiLineString:
+                yield* this.read_multi_line_string()
                 break
             case State.NumberLiteral:
 			    yield* this.number()
