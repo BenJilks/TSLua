@@ -14,6 +14,7 @@ export enum State {
 
 export enum TokenKind {
     EOF,
+    NotFinished,
 
     Identifier,
     StringLiteral,
@@ -81,6 +82,7 @@ export function token_kind_to_string(kind: TokenKind)
     switch(kind)
     {
         case TokenKind.EOF: return 'EOF'
+        case TokenKind.NotFinished: return 'NotFinished'
         case TokenKind.Identifier: return 'Identifier'
         case TokenKind.StringLiteral: return 'StringLiteral'
         case TokenKind.BooleanLiteral: return 'BooleanLiteral'
@@ -210,68 +212,38 @@ const keyword_map: Map<string, TokenKind> = new Map([
 export class TokenStream
 {
 
-    private genorator: Generator<Token, Token, void>
-    private peek_queue: Token[]
-    
-    constructor(genorator: Generator<Token, Token, void>) 
-    {
-        this.genorator = genorator
-        this.peek_queue = []
-    }
-
-    next(): Token
-    {
-        const token = this.peek_queue.shift()
-        if (token != undefined)
-            return token
-        return this.genorator.next().value
-    }
-
-    peek(count = 1): Token
-    {
-        while (this.peek_queue.length < count)
-            this.peek_queue.push(this.genorator.next().value)
-        return this.peek_queue[count - 1]
-    }
-
-}
-
-export class Lexer 
-{
-
     private state: State
     private processing_stream: string[]
+    private end_of_stream: boolean
     private buffer: string
+    private token_start_debug: Debug
 
     private line: number
     private column: number
-
-    private token_start_debug: Debug
+    private peek_queue: Token[]
 
     constructor() 
     {
         this.state = State.Initial
         this.processing_stream = []
         this.buffer = ''
+        this.token_start_debug = { line: 0, column: 0 }
+
         this.line = 1
         this.column = 1
-        this.token_start_debug = { line: 0, column: 0 }
+        this.peek_queue = []
     }
 
-    private token(token: Token): Token
+    private current(): string | undefined
     {
-        const kind = keyword_map.get(token.data)
-        if (kind != undefined)
-            token.kind = kind
-        return token
-    }
-
-    private current(): string 
-    {
-        if (this.processing_stream.length == 0)
-            return '\0'
-        else
+        if (this.processing_stream.length > 0)
             return this.processing_stream[0]
+
+        if (this.end_of_stream)
+            return undefined
+
+        this.end_of_stream = true
+        return '\0'
     }
 
     private consume() 
@@ -296,22 +268,23 @@ export class Lexer
         this.buffer = ''
     }
 
-    private *initial() 
+    private initial() 
     {
         if (this.processing_stream.length == 0)
         {
-            yield {
-                kind: TokenKind.EOF,
+            this.peek_queue.push({
                 data: '',
+                kind: TokenKind.EOF,
                 debug: {
                     line: this.line,
                     column: this.column,
                 },
-            }
+            })
+
             return
         }
 
-        const c = this.current()
+        const c = this.current() ?? '\0'
         if (/\s/.test(c))
             return this.consume()
 
@@ -336,7 +309,7 @@ export class Lexer
             const dobule_token_type = double_token_map.get(double)
             if (dobule_token_type != undefined)
             {
-                yield this.token({
+                this.peek_queue.push({
                     data: double,
                     kind: dobule_token_type,
                     debug: {
@@ -353,7 +326,7 @@ export class Lexer
         const single_token_type = single_token_map.get(c)
         if (single_token_type != undefined)
         {
-            yield this.token({
+            this.peek_queue.push({
                 data: c,
                 kind: single_token_type,
                 debug: {
@@ -388,18 +361,18 @@ export class Lexer
         }
     }
 
-    private *read_string()
+    private read_string()
     {
         const c = this.current()
         this.consume()
 
         if (c == '"')
         {
-            yield {
+            this.peek_queue.push({
                 data: this.buffer,
                 kind: TokenKind.StringLiteral,
                 debug: this.token_start_debug,
-            }
+            })
 
             this.state = State.Initial
             return
@@ -433,18 +406,18 @@ export class Lexer
         }
     }
 
-    private *read_multi_line_string()
+    private read_multi_line_string()
     {
-        const c = this.current()
+        const c = this.current() ?? '\0'
         this.consume()
 
         if (c + this.current() == ']]')
         {
-            yield {
+            this.peek_queue.push({
                 data: this.buffer,
                 kind: TokenKind.StringLiteral,
                 debug: this.token_start_debug,
-            }
+            })
 
             this.consume()
             this.state = State.Initial
@@ -454,14 +427,15 @@ export class Lexer
         this.buffer += c
     }
 
-    private *read_identifier()
+    private read_identifier()
     {
-        const c = this.current()
+        const c = this.current() ?? '\0'
         if (!/[a-zA-Z0-9_]/.test(c))
         {
-            yield this.token({
+            const kind = keyword_map.get(this.buffer)
+            this.peek_queue.push({
                 data: this.buffer,
-                kind: TokenKind.Identifier,
+                kind: kind ?? TokenKind.Identifier,
                 debug: this.token_start_debug,
             })
 
@@ -473,9 +447,9 @@ export class Lexer
         this.consume()
     }
 
-    private *number()
+    private number()
     {
-        const c = this.current()
+        const c = this.current() ?? '\0'
         if (/[0-9]/.test(c))
         {
             this.buffer += c
@@ -499,7 +473,7 @@ export class Lexer
             return
         }
 
-        yield this.token({
+        this.peek_queue.push({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
             debug: this.token_start_debug,
@@ -507,9 +481,9 @@ export class Lexer
         this.state = State.Initial
     }
 
-    private *number_dot()
+    private number_dot()
     {
-        const c = this.current()
+        const c = this.current() ?? '\0'
         if (/[0-9]/.test(c))
         {
             this.buffer += c
@@ -525,7 +499,7 @@ export class Lexer
             return
         }
 
-        yield this.token({
+        this.peek_queue.push({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
             debug: this.token_start_debug,
@@ -533,9 +507,9 @@ export class Lexer
         this.state = State.Initial
     }
 
-    private *number_exp_sign()
+    private number_exp_sign()
     {
-        const c = this.current()
+        const c = this.current() ?? '\0'
         if (/[0-9+\-]/.test(c))
         {
             this.buffer += c
@@ -544,7 +518,7 @@ export class Lexer
             return
         }
 
-        yield this.token({
+        this.peek_queue.push({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
             debug: this.token_start_debug,
@@ -552,9 +526,9 @@ export class Lexer
         this.state = State.Initial
     }
 
-    private *number_exp()
+    private number_exp()
     {
-        const c = this.current()
+        const c = this.current() ?? '\0'
         if (/[0-9]/.test(c))
         {
             this.buffer += c
@@ -562,7 +536,7 @@ export class Lexer
             return
         }
         
-        yield this.token({
+        this.peek_queue.push({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
             debug: this.token_start_debug,
@@ -579,36 +553,52 @@ export class Lexer
             this.state = State.Initial
     }
     
-    private *on_char()
+    private on_char()
     {
+        if (this.current() == undefined)
+        {
+            this.peek_queue.push({
+                data: '',
+                kind: this.state == State.Initial
+                    ? TokenKind.EOF
+                    : TokenKind.NotFinished,
+                debug: {
+                    line: this.line,
+                    column: this.column,
+                },
+            })
+
+            return
+        }
+
         switch (this.state)
         {
             case State.Initial:
-                yield* this.initial()
+                this.initial()
                 break
             case State.Identifier:
-                yield* this.read_identifier()
+                this.read_identifier()
                 break
             case State.StringLiteral:
-                yield* this.read_string()
+                this.read_string()
                 break
             case State.StringLiteralEscape:
                 this.read_string_escape()
                 break
             case State.MultiLineString:
-                yield* this.read_multi_line_string()
+                this.read_multi_line_string()
                 break
             case State.NumberLiteral:
-			    yield* this.number()
+			    this.number()
 			    break
             case State.NumberLiteralDot:
-			    yield* this.number_dot()
+			    this.number_dot()
 			    break
             case State.NumberLiteralExpSign:
-			    yield* this.number_exp_sign()
+			    this.number_exp_sign()
 			    break
             case State.NumberLiteralExp:
-			    yield* this.number_exp()
+			    this.number_exp()
 			    break
             case State.Comment:
 			    this.comment()
@@ -616,16 +606,24 @@ export class Lexer
         }
     }
 
-    private *feed_genorator(stream: string): Generator<Token, Token, void>
+    feed(stream: string)
     {
         this.processing_stream.push(...stream.split(''))
-        while (true)
-            yield* this.on_char()
+        this.end_of_stream = false
     }
 
-    feed(stream: string): TokenStream
+    next(): Token
     {
-        return new TokenStream(this.feed_genorator(stream))
+        if (this.peek_queue.length == 0)
+            this.peek()
+        return <Token> this.peek_queue.shift()
+    }
+
+    peek(count = 1): Token
+    {
+        while (this.peek_queue.length < count)
+            this.on_char()
+        return this.peek_queue[count - 1]
     }
 
 }

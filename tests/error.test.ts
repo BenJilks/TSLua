@@ -1,8 +1,8 @@
-import { Lua, DataType } from '../index'
+import { Engine, DataType } from '../index'
 
 test('Basic error reporting', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo()
             return a
         end
@@ -10,7 +10,7 @@ test('Basic error reporting', () =>
         a = foo()
     `)
     
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).toBeDefined()
@@ -19,7 +19,7 @@ test('Basic error reporting', () =>
 
 test('Parsing errors', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo()
             return a
         end
@@ -32,7 +32,7 @@ test('Parsing errors', () =>
 
 test('Matching end tokens', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo()
             return a
         done

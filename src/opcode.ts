@@ -120,3 +120,8 @@ export interface Op {
     debug: Debug,
 }
 
+export interface Program {
+    code: Op[],
+    start: number,
+}
+

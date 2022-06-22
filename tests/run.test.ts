@@ -1,9 +1,9 @@
-import { Lua, DataType } from '../index'
+import { Engine, DataType } from '../index'
 
 test('Can run a basic script', () =>
 {
-    const lua = new Lua('a = 1')
-    expect(lua.run()).toBeUndefined()
+    const lua = new Engine('a = 1')
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -13,7 +13,7 @@ test('Can run a basic script', () =>
 
 test('Can create and call function', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo(a, b)
             return a + b
         end
@@ -27,7 +27,7 @@ test('Can create and call function', () =>
         b = bar{ 1, 2 }
         c = bar"Single Argument"
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -51,7 +51,7 @@ test('Can create and call function', () =>
 
 test('Locals are kept local', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo(a, b)
             local x, z
             local y = 3
@@ -67,7 +67,7 @@ test('Locals are kept local', () =>
             x = 1
         end
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     expect(lua.global('x')).toBeUndefined()
     expect(lua.global('y')).toBeUndefined()
@@ -77,7 +77,7 @@ test('Locals are kept local', () =>
 
 test('General itorators', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function iter(count)
             local i = 0
             return function()
@@ -97,7 +97,7 @@ test('General itorators', () =>
             total = total + 1
         end
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const total = lua.global('total')
     expect(total).not.toBeUndefined()
@@ -107,7 +107,7 @@ test('General itorators', () =>
 
 test('Numeric itorators', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         total = 0
         for i = 0, 10 do
             total = total + 1
@@ -118,7 +118,7 @@ test('Numeric itorators', () =>
             nums = nums .. i
         end
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const total = lua.global('total')
     expect(total).not.toBeUndefined()
@@ -133,14 +133,14 @@ test('Numeric itorators', () =>
 
 test('Multiple values', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo()
             return 1, 2
         end
 
         a, b = foo()
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -153,7 +153,7 @@ test('Multiple values', () =>
     expect(b?.number).toBe(2)
 
     {
-        const lua = new Lua(`
+        const lua = new Engine(`
             function foo()
                 return 1, 2
             end
@@ -164,7 +164,7 @@ test('Multiple values', () =>
     }
 
     {
-        const lua = new Lua(`
+        const lua = new Engine(`
             function foo()
                 return 1
             end
@@ -177,7 +177,7 @@ test('Multiple values', () =>
 
 test('All operators', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         a = 1 + 2
         b = 2 - 1
         c = 2 * 2
@@ -204,7 +204,7 @@ test('All operators', () =>
         t = 2 << 1
         u = ~2
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const is_number = (name: string, value: number) =>
     {
@@ -253,7 +253,7 @@ test('All operators', () =>
 
 test('Tables', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         table = { "a", "b", c = false, ["x" .. "y"] = "expr" }
         
         b = table[2]
@@ -261,7 +261,7 @@ test('Tables', () =>
         table["test"] = 42
         table.d = true
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const b = lua.global('b')
     expect(b).not.toBeUndefined()
@@ -286,12 +286,12 @@ test('Tables', () =>
 
 test('Sub-expressions', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         a = 1 + 2 * 2
         b = 2 * 2 + 1
         c = 1 + 2 * 2 == 2 * 2 + 1 and true
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -311,7 +311,7 @@ test('Sub-expressions', () =>
 
 test('Break', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         i = 0
         while i < 1 do
             break
@@ -323,7 +323,7 @@ test('Break', () =>
             i = i + 1
         end
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const i = lua.global('i')
     expect(i).not.toBeUndefined()
@@ -333,7 +333,7 @@ test('Break', () =>
 
 test('Local functions', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         package = {}
 
         function package.new()
@@ -342,7 +342,7 @@ test('Local functions', () =>
 
         a = package.new()
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -352,12 +352,12 @@ test('Local functions', () =>
 
 test('Comments', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         -- This is a comment
         a = 1 -- A different comment
         -- More comments
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -367,7 +367,7 @@ test('Comments', () =>
 
 test('If, ElseIf and Else', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         if true then
             a = 1
         else
@@ -390,7 +390,7 @@ test('If, ElseIf and Else', () =>
             c = 4
         end
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -405,11 +405,11 @@ test('If, ElseIf and Else', () =>
 
 test('Length operator', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         a = #"Hello, world!"
         b = #{ "a", "b", "c" }
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -424,7 +424,7 @@ test('Length operator', () =>
 
 test('Local to block', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo()
             local y, bar
             y = 1
@@ -443,7 +443,7 @@ test('Local to block', () =>
 
         a = foo()()
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -453,13 +453,13 @@ test('Local to block', () =>
 
 test('String escapes', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         a = "This\\nString\\tContains\\"escapes\\""
         b = [[
             Multi-line strings
         ]]
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -474,7 +474,7 @@ test('String escapes', () =>
 
 test('Semi-colon seperation', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         function foo(arg)
             return arg
         end
@@ -482,7 +482,7 @@ test('Semi-colon seperation', () =>
         a = foo "a"
         b = foo ; "b"
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const a = lua.global('a')
     expect(a).not.toBeUndefined()
@@ -496,7 +496,7 @@ test('Semi-colon seperation', () =>
 
 test('Repeat statement', () =>
 {
-    const lua = new Lua(`
+    const lua = new Engine(`
         i = 0
         repeat
             i = i + 1
@@ -506,7 +506,7 @@ test('Repeat statement', () =>
             i = i - 1
         until true
     `)
-    expect(lua.run()).toBeUndefined()
+    expect(lua.run()).not.toBeInstanceOf(Error)
 
     const i = lua.global('i')
     expect(i).not.toBeUndefined()

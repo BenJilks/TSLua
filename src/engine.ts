@@ -1,7 +1,7 @@
 import { Op, OpCode, op_code_name } from './opcode'
 import { DataType, NativeFunction, Variable, nil, make_number, make_boolean, make_string } from './runtime'
 import * as std from './lib'
-import { Lexer } from './lexer'
+import { TokenStream } from './lexer'
 import { parse } from './parser'
 import { compile } from './compiler'
 
@@ -68,12 +68,19 @@ function equals(a: Variable | undefined, b: Variable | undefined): boolean
     }
 }
 
-export class Lua
+export interface LuaOptions
+{
+    trace?: boolean
+    trace_instructions?: boolean
+    trace_stack?: boolean
+    locals?: Map<string, Variable>,
+}
+
+export class Engine
 {
 
     private program: Op[]
     private globals: Map<string, Variable>
-    private debug: boolean
 
     private ip: number
     private stack: Variable[]
@@ -84,21 +91,52 @@ export class Lua
     private error: Error | undefined
     private assign_stack_heigth: number
 
-    constructor(script: string,
-                globals?: Map<string, Variable>,
-                debug?: boolean)
+    constructor(script?: string,
+                globals?: Map<string, Variable>)
     {
+        this.program = []
         this.globals = globals ?? std.std_lib()
-        this.debug = debug ?? false
         this.error = undefined
         this.reset()
 
-        const lexer = new Lexer()
-        const ast = parse(lexer.feed(script))
+        if (script != undefined)
+        {
+            const result = this.load(script)
+            if (result != undefined)
+                this.error = result
+        }
+    }
+
+    load(chunk: string): undefined | Error
+    {
+        const stream = new TokenStream()
+        stream.feed(chunk)
+
+        const ast = parse(stream)
         if (ast instanceof Error)
-            this.error = ast
-        else
-            this.program = compile(ast)
+            return ast
+
+        const program = compile(ast, this.program)
+        this.program = program.code
+        this.ip = program.start
+    }
+
+    dump_bytecode()
+    {
+        if (this.error != undefined)
+        {
+            console.log(this.error)
+            return
+        }
+
+        for (const [i, op] of this.program.entries())
+        {
+            const arg = op.arg != undefined ? std.variable_to_string(op.arg) : ''
+            if (i == this.ip)
+                console.log('*', i, op_code_name(op.code), arg)
+            else
+                console.log(i, op_code_name(op.code), arg)
+        }
     }
 
     global(name: string): Variable | undefined
@@ -124,50 +162,35 @@ export class Lua
 
     reset()
     {
+        this.assign_stack_heigth = 0
         this.ip = 0
         this.stack = []
         this.locals_stack = []
         this.call_stack = []
         this.locals = new Map()
-
-        this.assign_stack_heigth = 0
     }
 
-    call(function_id: number, args: Variable[], locals?: Map<string, Variable>): Error | Variable[]
-    {
-        for (const arg of args)
-            this.stack.push(arg)
-        this.stack.push(make_number(args.length))
-        this.locals = locals ?? new Map()
-        this.ip = function_id
-
-        const result = this.run()
-        if (result instanceof Error)
-            return result
-
-        const return_values = this.stack
-        this.reset()
-        return return_values
-    }
-
-    run(): Error | void
+    run(options?: LuaOptions): Variable | Error
     {
         if (this.error != undefined)
             return this.error
 
+        if (options?.locals != undefined)
+            this.locals = options.locals
+
         let step_count = 0
-        while (true)
+        while (this.ip < this.program.length)
         {
-            const result = this.step()
-            if (result instanceof Error)
+            const result = this.step(options)
+            if (result != undefined)
                 return result
-            else if (!result)
-                return
 
             step_count += 1
             if (step_count > 1000)
-                throw new Error()
+                return new Error('Program ran for too long')
         }
+
+        return this.stack[0] ?? nil
     }
 
     private operation(op: (x: number, y: number) => number)
@@ -198,24 +221,14 @@ export class Lua
         return captured
     }
 
-    step(): boolean | Error
+    private runtime_error(op: Op, message: string): Error
     {
-        if (this.error != undefined)
-            return this.error
+        return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
+    }
 
-        if (this.ip >= this.program.length)
-            return false
-
-        const op = this.program[this.ip++] 
+    private run_instruction(op: Op): undefined | Error
+    {
         const { code, arg } = op
-        if (this.debug)
-            console.log(this.ip - 1, op_code_name(code), arg)
-
-        function error(message: string)
-        {
-            return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
-        }
-
         switch(code)
         {
             case OpCode.Pop:
@@ -241,11 +254,11 @@ export class Lua
             {
                 const table = this.stack.pop()
                 if (table == undefined || table.table == undefined)
-                    return error('Can only index on tables')
+                    return this.runtime_error(op, 'Can only index on tables')
 
                 const i = index(this.stack.pop())
                 if (i == undefined)
-                    return error('Invalid index, must be a number or string')
+                    return this.runtime_error(op, 'Invalid index, must be a number or string')
 
                 this.stack.push(table.table.get(i) ?? nil)
                 break
@@ -338,7 +351,11 @@ export class Lua
             case OpCode.Return:
             {
                 if (this.call_stack.length == 0)
-                    return false
+                {
+                    this.ip = this.program.length
+                    break
+                }
+
                 this.ip = this.call_stack.pop() ?? this.program.length
                 this.locals = this.locals_stack.pop() ?? new Map()
                 break
@@ -349,14 +366,14 @@ export class Lua
                 const count = arg?.number ?? 1
                 const table = this.stack[this.stack.length - count*2 - 1] ?? nil
                 if (table.table == undefined)
-                    return error('Can only index tables')
+                    return this.runtime_error(op, 'Can only index tables')
 
                 for (let i = 0; i < count; i++)
                 {
                     const key = index(this.stack.pop())
                     const value = this.stack.pop() ?? nil
                     if (key == undefined)
-                        return error('Invalid key, must be a number or string')
+                        return this.runtime_error(op, 'Invalid key, must be a number or string')
 
                     table.table.set(key, value)
                 }
@@ -462,7 +479,8 @@ export class Lua
                 const expected = arg?.number ?? 0
                 if (got == expected)
                     break
-                return error(
+
+                return this.runtime_error(op,
                     `Execpect ${ expected } ` +
                     `argument(s), got ${ got }`)
             }
@@ -474,15 +492,35 @@ export class Lua
                 const expected = arg?.number ?? 0
                 if (value_count == expected)
                     break
-                return error(
+
+                return this.runtime_error(op,
                     `Execpect to assign ${ expected } ` +
                     `value(s), got ${ value_count } instead`)
             }
         }
+    }
 
-        if (this.debug)
-            console.log(...this.stack.map(std.variable_to_string))
-        return true
+    step(options?: LuaOptions): undefined | Error
+    {
+        if (this.error != undefined)
+            return this.error
+
+        if (this.ip >= this.program.length)
+            return
+
+        const op = this.program[this.ip++] 
+        if (options?.trace || options?.trace_instructions)
+        {
+            const arg = op.arg != undefined ? std.variable_to_string(op.arg) : ''
+            console.log(this.ip - 1, op_code_name(op.code), arg)
+        }
+
+        const result = this.run_instruction(op)
+        if (result != undefined)
+            return result
+
+        if (options?.trace || options?.trace_stack)
+            console.log(this.ip - 1, ...this.stack.map(std.variable_to_string))
     }
 
 }

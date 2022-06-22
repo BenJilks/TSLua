@@ -1,6 +1,6 @@
 import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local, NumericFor, Repeat, Do } from './ast'
 import { Value, ValueKind } from './ast'
-import { Op, OpCode } from './opcode'
+import { Op, OpCode, Program } from './opcode'
 import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
 import { Token } from './lexer'
 
@@ -13,7 +13,7 @@ function compile_function(chunk: Chunk, token: Token, parameters: Token[], funct
         ops.push({ code: OpCode.MakeLocal, arg: make_string(parameter.data), debug: parameter.debug })
         ops.push({ code: OpCode.Store, arg: make_string(parameter.data), debug: parameter.debug })
     }
-    ops.push(...compile_chunk(chunk, functions))
+    ops.push(...compile_block(chunk, functions))
     ops.push({ code: OpCode.Push, arg: nil, debug: token.debug })
     ops.push({ code: OpCode.Return, arg: make_number(0), debug: token.debug })
 
@@ -221,22 +221,6 @@ function compile_assignment(assignment: Assignment | undefined, functions: Op[][
         throw new Error()
     
     const ops: Op[] = []
-    for (const lhs of assignment.lhs)
-    {
-        if (lhs.kind != ExpressionKind.Value)
-            continue
-
-        const identifier = lhs.value?.identifier ?? ''
-        if (assignment.local)
-        {
-            ops.push({
-                code: OpCode.MakeLocal,
-                arg: make_string(identifier),
-                debug: lhs.token.debug,
-            })
-        }
-    }
-
     const debug = assignment.token.debug
     ops.push({ code: OpCode.AssignPush, debug: debug })
     for (const rhs of assignment.rhs)
@@ -253,13 +237,17 @@ function compile_assignment(assignment: Assignment | undefined, functions: Op[][
                 if (lhs.value?.kind != ValueKind.Variable)
                     throw new Error()
              
-                const identifier = lhs.value?.identifier ?? ''
-                ops.push({ code: OpCode.Store, arg: make_string(identifier), debug: debug })
+                const identifier = make_string(lhs.value?.identifier ?? '')
+                if (assignment.local)
+                    ops.push({ code: OpCode.MakeLocal, arg: identifier, debug: debug })
+                ops.push({ code: OpCode.Store, arg: identifier, debug: debug })
                 break
             }    
 
             case ExpressionKind.Index:
             {
+                // FIXME: Throw error here if `assignment.local` is true. I think?
+
                 ops.push(...compile_expression(lhs.expression, functions))
                 ops.push({ code: OpCode.Swap, debug: debug })
                 ops.push(...compile_expression(lhs.index, functions))
@@ -299,13 +287,13 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
 
     const else_chunk: Op[] = []
     if (if_block.else_body != undefined)
-        else_chunk.push(...compile_chunk(if_block.else_body, functions))
+        else_chunk.push(...compile_block(if_block.else_body, functions))
 
     const if_else_chunks: Op[][] = []
     for (const { body, condition, token } of if_block.else_if_bodies.reverse())
     {
         const ops: Op[] = []
-        const if_else_body = compile_chunk(body, functions)
+        const if_else_body = compile_block(body, functions)
         ops.push(...compile_expression(condition, functions))
         ops.push({ code: OpCode.JumpIfNot, arg: make_number(if_else_body.length + 1), debug: token.debug })
         ops.push(...if_else_body)
@@ -317,7 +305,7 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
 
     const debug = if_block.token.debug
     const ops: Op[] = []
-    const body = compile_chunk(if_block.body, functions)
+    const body = compile_block(if_block.body, functions)
     ops.push({ code: OpCode.StartBlock, debug: debug })
     ops.push(...compile_expression(if_block.condition, functions))
     ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + 1), debug: debug })
@@ -353,7 +341,7 @@ function compile_while(while_block: While | undefined, functions: Op[][]): Op[]
 
     const debug = while_block.token.debug
     const ops: Op[] = []
-    const body = compile_chunk(while_block.body, functions)
+    const body = compile_block(while_block.body, functions)
     replace_breaks(body, 1)
 
     ops.push({ code: OpCode.StartBlock, debug: debug })
@@ -371,7 +359,7 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
         throw new Error()
 
     const ops: Op[] = []
-    const body = compile_chunk(for_block.body, functions)
+    const body = compile_block(for_block.body, functions)
     replace_breaks(body, 1)
 
     const debug = for_block.token.debug
@@ -414,7 +402,7 @@ function compile_numeric_for(numeric_for_block: NumericFor | undefined, function
         throw new Error()
 
     const ops: Op[] = []
-    const body = compile_chunk(numeric_for_block.body, functions)
+    const body = compile_block(numeric_for_block.body, functions)
     const step = compile_step(numeric_for_block.step, functions)
     const index = numeric_for_block.index.data
     const debug = numeric_for_block.index.debug
@@ -450,7 +438,7 @@ function compile_repeat(repeat: Repeat | undefined, functions: Op[][]): Op[]
     const debug = repeat.token.debug
     ops.push({ code: OpCode.StartBlock, debug: debug })
 
-    ops.push(...compile_chunk(repeat.body, functions))
+    ops.push(...compile_block(repeat.body, functions))
     ops.push(...compile_expression(repeat.condition, functions))
     ops.push({ code: OpCode.JumpIfNot, arg: make_number(-ops.length), debug: debug })
 
@@ -466,7 +454,7 @@ function compile_do(do_block: Do | undefined, functions: Op[][]): Op[]
     const ops: Op[] = []
     const debug = do_block.token.debug
     ops.push({ code: OpCode.StartBlock, debug: debug })
-    ops.push(...compile_chunk(do_block.body, functions))
+    ops.push(...compile_block(do_block.body, functions))
     ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops
 }
@@ -486,19 +474,41 @@ function compile_return(return_block: Return | undefined, functions: Op[][]): Op
     return ops
 }
 
-function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
+interface ChunkResult
+{
+    code: Op[]
+    has_last_expression: boolean,
+}
+
+function compile_block(chunk: Chunk, functions: Op[][]): Op[]
+{
+    const { code, has_last_expression } = compile_chunk(chunk, functions)
+    if (has_last_expression)
+        code.push({ code: OpCode.Pop, debug: { line: 0, column: 0 } })
+
+    return code
+}
+
+function compile_chunk(chunk: Chunk, functions: Op[][]): ChunkResult
 {
     const ops = []
+    let has_last_expression = false
 
-    for (const statement of chunk.statements)
+    for (const [index, statement] of chunk.statements.entries())
     {
+        const is_last_statement = (index == chunk.statements.length - 1)
         switch (statement.kind)
         {
             case StatementKind.Empty:
                 break
             case StatementKind.Expression:
                 ops.push(...compile_expression(statement.expression, functions))
-                if (statement.expression != undefined)
+                if (statement.expression == undefined)
+                    break
+
+                if (is_last_statement)
+                    has_last_expression = true
+                else
                     ops.push({ code: OpCode.Pop, debug: statement.expression.token.debug })
                 break
             case StatementKind.Assignment:
@@ -534,7 +544,10 @@ function compile_chunk(chunk: Chunk, functions: Op[][]): Op[]
         }
     }
 
-    return ops
+    return {
+        code: ops,
+        has_last_expression: has_last_expression,
+    }
 }
 
 function link(code: Op[], function_id: number, location: number)
@@ -549,22 +562,32 @@ function link(code: Op[], function_id: number, location: number)
     }
 }
 
-export function compile(chunk: Chunk): Op[]
+export function compile(chunk: Chunk, extend?: Op[]): Program
 {
+    const ops = [...(extend ?? [])]
     const functions: Op[][] = []
-    const code = compile_chunk(chunk, functions)
-    code.push({ code: OpCode.Return, arg: make_number(1), debug: { line: 0, column: 0 } })
+    const { code, has_last_expression } = compile_chunk(chunk, functions)
 
     const function_locations: number[] = []
     for (const func of functions)
     {
-        function_locations.push(code.length)
-        code.push(...func)
+        function_locations.push(ops.length)
+        ops.push(...func)
     }
 
     for (const [id, location] of function_locations.entries())
         link(code, id, location)
 
-    return code
+    const start = ops.length
+    if (extend?.length ?? 0 > 0)
+        ops.push({ code: OpCode.Pop, debug: { line: 0, column: 0 } })
+    ops.push(...code)
+    if (!has_last_expression)
+        ops.push({ code: OpCode.Push, arg: nil, debug: { line: 0, column: 0 } })
+
+    return {
+        code: ops,
+        start: start,
+    }
 }
 

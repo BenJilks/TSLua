@@ -8,6 +8,8 @@ export function variable_to_string(variable: Variable): string
         case DataType.Boolean: return variable.boolean ? 'true' : 'false'
         case DataType.Number: return variable.number?.toString() ?? '0'
         case DataType.String: return variable.string ?? ''
+        case DataType.Function: return `<Function ${ variable.function_id ?? 'nil' }>`
+        case DataType.NativeFunction: return `<Function ${ variable.native_function?.name ?? 'nil' }>`
         case DataType.Table: 
         {
             return `{ ${ [...variable.table?.entries() ?? []]
