@@ -81,6 +81,7 @@ export class Engine
 
     private program: Op[]
     private globals: Map<string, Variable>
+    private start_ip: number
 
     private ip: number
     private stack: Variable[]
@@ -119,6 +120,7 @@ export class Engine
         const program = compile(ast, this.program)
         this.program = program.code
         this.ip = program.start
+        this.start_ip = program.start
     }
 
     dump_bytecode()
@@ -163,7 +165,7 @@ export class Engine
     reset()
     {
         this.assign_stack_heigth = 0
-        this.ip = 0
+        this.ip = this.start_ip
         this.stack = []
         this.locals_stack = []
         this.call_stack = []
