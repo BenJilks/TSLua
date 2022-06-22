@@ -170,6 +170,39 @@ export class Engine
         this.locals = new Map()
     }
 
+    call(func: Variable, ...args: Variable[]): Variable[] | Error
+    {
+        if (func.native_function != undefined)
+            return func.native_function(this, ...args)
+
+        if (func.function_id == undefined)
+            return new Error() // TODO: Error message
+
+        const old_stack = this.stack
+        const old_call_stack = this.call_stack
+        const old_ip = this.ip
+        this.stack = []
+        this.call_stack = []
+
+        for (const arg of args)
+            this.stack.push(arg)
+        this.stack.push(make_number(args.length))
+        this.locals_stack.push(this.locals)
+        this.locals = func.locals ?? new Map()
+        this.ip = func.function_id ?? this.ip
+        
+        const result = this.run()
+        if (result instanceof Error)
+            return result
+
+        const return_values = this.stack
+        this.stack = old_stack
+        this.call_stack = old_call_stack
+        this.locals = this.locals_stack.pop() ?? new Map()
+        this.ip = old_ip
+        return return_values
+    }
+
     run(options?: LuaOptions): Variable | Error
     {
         if (this.error != undefined)
@@ -475,7 +508,7 @@ export class Engine
                 if (func_var.native_function != undefined)
                 {
                     const args = this.stack.splice(this.stack.length - count, count)
-                    this.stack.push(...func_var.native_function(...args))
+                    this.stack.push(...func_var.native_function(this, ...args))
                     break
                 }
 

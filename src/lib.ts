@@ -1,4 +1,5 @@
-import { DataType, nil, Variable } from './runtime'
+import { Engine } from './engine'
+import { DataType, make_number, make_string, nil, Variable } from './runtime'
 
 export function variable_to_string(variable: Variable): string
 {
@@ -19,13 +20,13 @@ export function variable_to_string(variable: Variable): string
     }
 }
 
-function print(...args: Variable[]): Variable[]
+function print(_: Engine, ...args: Variable[]): Variable[]
 {
     console.log(...args.map(variable_to_string))
     return [nil]
 }
 
-function ipairs(table: Variable): Variable[]
+function ipairs(_: Engine, table: Variable): Variable[]
 {
     if (table.data_type != DataType.Table || table.table == undefined)
         return [nil]
@@ -52,7 +53,7 @@ function ipairs(table: Variable): Variable[]
     }]
 }
 
-function range(count: Variable): Variable[]
+function range(_: Engine, count: Variable): Variable[]
 {
     let index = 0
     return [{
@@ -67,21 +68,44 @@ function range(count: Variable): Variable[]
     }]
 }
 
-function random(): Variable[]
+function random(_: Engine): Variable[]
 {
     return [{ data_type: DataType.Number, number: Math.random() }]
 }
 
-function len(table: Variable): Variable[]
+function len(_: Engine, table: Variable): Variable[]
 {
     const len = table.table?.size ?? 1
     return [{ data_type: DataType.Number, number: len }]
 }
 
-function is_empty(table: Variable): Variable[]
+function is_empty(_: Engine, table: Variable): Variable[]
 {
     const len = table.table?.size ?? 0
     return [{ data_type: DataType.Boolean, boolean: len == 0 }]
+}
+
+function sort(engine: Engine, table: Variable, by: Variable): Variable[]
+{
+    const entries: [string | number, Variable][] = [...table.table?.entries() ?? []]
+    entries.sort(([_, a], [__, b]) =>
+    {
+        const result = engine.call(by, a, b)
+        if (result instanceof Error)
+            return 0
+
+        return result.at(0)?.number ?? 0
+    })
+
+    const numbered_entries: [number, Variable][] = entries.map(([key, _], i) =>
+    {
+        if (typeof key == 'number')
+            return [i + 1, make_number(key)]
+        else
+            return [i + 1, make_string(key)]
+    })
+
+    return [{ data_type: DataType.Table, table: new Map(numbered_entries) }]
 }
 
 export function std_lib(): Map<string, Variable>
@@ -93,6 +117,7 @@ export function std_lib(): Map<string, Variable>
         ['random', { data_type: DataType.NativeFunction, native_function: random }],
         ['len', { data_type: DataType.NativeFunction, native_function: len }],
         ['is_empty', { data_type: DataType.NativeFunction, native_function: is_empty }],
+        ['sort', { data_type: DataType.NativeFunction, native_function: sort }],
     ])
 }
 

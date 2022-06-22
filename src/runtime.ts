@@ -1,3 +1,4 @@
+import { Engine } from './engine'
 
 export enum DataType {
     Nil,
@@ -9,7 +10,7 @@ export enum DataType {
     Table,
 }
 
-export type NativeFunction = (...args: Variable[]) => Variable[]
+export type NativeFunction = (engine: Engine, ...args: Variable[]) => Variable[]
 export interface Variable {
     data_type: DataType,
     boolean?: boolean,
