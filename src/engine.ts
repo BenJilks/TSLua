@@ -253,10 +253,24 @@ export class Engine
             case OpCode.LoadIndex:
             {
                 const table = this.stack.pop()
+                if (table?.data_type == DataType.Nil)
+                {
+                    this.stack.pop() // Pop index
+                    this.stack.push(nil)
+                    break
+                }
+
                 if (table == undefined || table.table == undefined)
                     return this.runtime_error(op, 'Can only index on tables')
 
-                const i = index(this.stack.pop())
+                const i_var = this.stack.pop()
+                if (i_var?.data_type == DataType.Nil)
+                {
+                    this.stack.push(nil)
+                    break
+                }
+
+                const i = index(i_var)
                 if (i == undefined)
                     return this.runtime_error(op, 'Invalid index, must be a number or string')
 
