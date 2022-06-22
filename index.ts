@@ -9,7 +9,7 @@ import * as ast from './src/ast'
 import * as opcode from './src/opcode'
 import * as runtime from './src/runtime'
 
-export type NativeFunction = (...args: Variable[]) => Variable[]
+export type NativeFunction = (engine: Engine, ...args: Variable[]) => Variable[]
 export interface Variable {
     data_type: DataType,
     boolean?: boolean,
