@@ -107,3 +107,25 @@ test('String functions', () =>
     expect(lua.global('j')).toEqual(make_string('Test 2 formatting args'))
 })
 
+test('Table functions', () =>
+{
+    const lua = new Engine(`
+        x = { 1 = "a", 2 = "b", 3 = "c" }
+        a = table.concat(x, ",")
+        table.insert(x, 2, "-")
+        table.move(x, 2, 2, 4)
+        table.insert(x, "c")
+
+        b = table.pack("a", "b", "c")
+        table.remove(b, 2)
+        c, d = table.unpack(b)
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    expect(lua.global('a')).toEqual(make_string('a,b,c'))
+    expect([...lua.global('x')?.table?.values() ?? []].map(x => x.string)).toEqual(['a', '-', 'b', '-', 'c'])
+    expect([...lua.global('b')?.table?.values() ?? []].map(x => x.string)).toEqual(['a', 'c'])
+    expect(lua.global('c')).toEqual(make_string('a'))
+    expect(lua.global('d')).toEqual(make_string('c'))
+})
+

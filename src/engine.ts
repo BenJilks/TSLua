@@ -387,13 +387,11 @@ export class Engine
 
             case OpCode.Length:
             {
-                const value = this.stack.pop() ?? nil
-                switch (value.data_type)
-                {
-                    case DataType.Table: this.stack.push(make_number(value.table?.size ?? 0)); break
-                    case DataType.String: this.stack.push(make_number(value.string?.length ?? 0)); break
-                    default: this.stack.push(nil)
-                }
+                const size = std.variable_size(this.stack.pop() ?? nil)
+                if (size == undefined)
+                    this.stack.push(nil)
+                else
+                    this.stack.push(make_number(size))
                 break
             }
 

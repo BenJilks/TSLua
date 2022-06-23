@@ -1,6 +1,20 @@
 import { Engine } from './engine'
 import { DataType, make_number, make_string, nil, Variable } from './runtime'
 
+export function variable_size(value: Variable): number | undefined
+{
+    switch (value.data_type)
+    {
+        case DataType.String: return value.string?.length ?? 0
+        case DataType.Table:
+            return ([...value.table?.keys() ?? []]
+                .filter(key => typeof key == 'number') as number[])
+                .reduce((acc, key) => Math.max(acc, key), 0)
+        default:
+            return undefined
+    }
+}
+
 export function variable_to_string(variable: Variable): string
 {
     switch (variable.data_type)
@@ -276,6 +290,97 @@ function string_reverse(_: Engine, s: Variable): Variable[]
         make_string(s.string.split('').reverse().join(''))]
 }
 
+function table_concat(_: Engine, list: Variable, sep?: Variable, i?: Variable, j?: Variable): Variable[]
+{
+    if (list.table == undefined)
+        return [nil]
+
+    const seporator = sep?.string ?? ''
+    const start = i?.number ?? 1
+    const result = [...list.table.values()]
+        .slice(start - 1, j?.number)
+        .map(variable_to_string)
+        .join(seporator)
+    return [make_string(result)]
+}
+
+function table_insert(_: Engine, list: Variable, arg_a?: Variable, arg_b?: Variable): Variable[]
+{
+    if (list.table == undefined)
+        return [nil]
+
+    const size = variable_size(list) ?? 0
+    let pos = size + 1
+    let value = arg_a ?? nil
+    if (arg_b != undefined)
+    {
+        pos = arg_a?.number ?? pos
+        value = arg_b ?? nil
+    }
+
+    for (let i = size + 1; i > pos; --i)
+        list.table.set(i, list.table.get(i - 1) ?? nil)
+    list.table.set(pos, value)
+    return [nil]
+}
+
+function table_move(_: Engine, a1: Variable, f: Variable, e: Variable, t: Variable, a2?: Variable): Variable[]
+{
+    a2 = a2 ?? a1
+    if (a1.table == undefined || a2.table == undefined)
+        return [nil]
+
+    if (f.number == undefined || e.number == undefined || t.number == undefined)
+        return [nil]
+
+    const src_start = f.number
+    const src_end = e.number
+    const dest_start = t.number
+    const count = src_end - src_start
+    for (let index = 0; index <= count; index++)
+        a2.table.set(dest_start + index, a1.table.get(src_start + index) ?? nil)
+
+    return [a2]
+}
+
+function table_pack(_: Engine, ...args: Variable[]): Variable[]
+{
+    const elements = args
+        .map((item, i) => [i + 1, item] as [number | string, Variable])
+
+    return [{
+        data_type: DataType.Table,
+        table: new Map([...elements, ['n', make_number(args.length)]]),
+    }]
+}
+
+function table_remove(_: Engine, list: Variable, pos?: Variable): Variable[]
+{
+    if (list.table == undefined)
+        return [nil]
+
+    const size = variable_size(list) ?? 0
+    const remove_index = pos?.number ?? (size + 1)
+    const deleted_value = list.table.get(remove_index) ?? nil
+
+    for (let index = remove_index; index < size; index++)
+        list.table.set(index, list.table.get(index + 1) ?? nil)
+    list.table.delete(size)
+
+    return [deleted_value]
+}
+
+function table_unpack(_: Engine, list: Variable, i?: Variable, j?: Variable): Variable[]
+{
+    if (list.table == undefined)
+        return [nil]
+
+    const size = variable_size(list) ?? 0
+    const start = i?.number ?? 1
+    const end = j?.number ?? size
+    return [...list.table.values()].splice(start - 1, end)
+}
+
 export function std_lib(): Map<string, Variable>
 {
     return new Map([
@@ -301,6 +406,14 @@ export function std_lib(): Map<string, Variable>
             ['lower', { data_type: DataType.NativeFunction, native_function: string_lower }],
             ['upper', { data_type: DataType.NativeFunction, native_function: string_upper }],
             ['reverse', { data_type: DataType.NativeFunction, native_function: string_reverse }],
+        ]) }],
+        ['table', { data_type: DataType.Table, table: new Map([
+            ['concat', { data_type: DataType.NativeFunction, native_function: table_concat }],
+            ['insert', { data_type: DataType.NativeFunction, native_function: table_insert }],
+            ['move', { data_type: DataType.NativeFunction, native_function: table_move }],
+            ['pack', { data_type: DataType.NativeFunction, native_function: table_pack }],
+            ['remove', { data_type: DataType.NativeFunction, native_function: table_remove }],
+            ['unpack', { data_type: DataType.NativeFunction, native_function: table_unpack }],
         ]) }],
     ])
 }
