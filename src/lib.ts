@@ -202,6 +202,40 @@ function string_char(_: Engine, ...chars: Variable[]): Variable[]
     return [make_string(s)]
 }
 
+function string_format(_: Engine, format: Variable, ...args: Variable[]): Variable[]
+{
+    if (format.string == undefined)
+        return [nil]
+
+    let result = ''
+    let is_format = false
+    let arg_index = 0
+    for (const char of format.string)
+    {
+        if (is_format)
+        {
+            switch (char)
+            {
+                case 'd': result += Math.floor(args[arg_index++].number ?? 0).toString(); break
+                case 'f': result += args[arg_index++].number?.toString(); break
+                case 's': result += variable_to_string(args[arg_index++]); break
+                default:
+                    result += `%${ char }`
+            }
+            is_format = false
+        }
+        else
+        {
+            if (char == '%')
+                is_format = true
+            else
+                result += char
+        }
+    }
+
+    return [make_string(result)]
+}
+
 function string_find(_: Engine, s: Variable, pattern: Variable, init?: Variable, plain?: Variable): Variable[]
 {
     if (s.string == undefined || pattern.string == undefined)
@@ -261,6 +295,7 @@ export function std_lib(): Map<string, Variable>
         ['string', { data_type: DataType.Table, table: new Map([
             ['byte', { data_type: DataType.NativeFunction, native_function: string_byte }],
             ['char', { data_type: DataType.NativeFunction, native_function: string_char }],
+            ['format', { data_type: DataType.NativeFunction, native_function: string_format }],
             ['find', { data_type: DataType.NativeFunction, native_function: string_find }],
             ['len', { data_type: DataType.NativeFunction, native_function: string_len }],
             ['lower', { data_type: DataType.NativeFunction, native_function: string_lower }],

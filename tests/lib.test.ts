@@ -90,6 +90,7 @@ test('String functions', () =>
         g = string.lower("Test")
         h = string.reverse("Test")
         i = string.char(97, 98, 99)
+        j = string.format("Test %d formatting %s", 2, "args")
     `)
     expect(lua.run()).not.toBeInstanceOf(Error)
 
@@ -103,5 +104,6 @@ test('String functions', () =>
     expect(lua.global('g')).toEqual(make_string('test'))
     expect(lua.global('h')).toEqual(make_string('tseT'))
     expect(lua.global('i')).toEqual(make_string('abc'))
+    expect(lua.global('j')).toEqual(make_string('Test 2 formatting args'))
 })
 
