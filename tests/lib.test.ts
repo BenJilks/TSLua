@@ -17,3 +17,17 @@ test('Sort', () =>
     expect(y?.table?.get(3)).toEqual(make_string('c'))
 })
 
+test('First', () =>
+{
+    const lua = new Engine(`
+        x = { "a" = 3, "b" = 1, "c" = 4 }
+        y = first(x)
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    const y = lua.global('y')
+    expect(y).toBeDefined()
+    expect(y?.data_type).toBe(DataType.String)
+    expect(y?.string).toBe('a')
+})
+

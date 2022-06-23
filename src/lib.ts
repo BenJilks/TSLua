@@ -108,6 +108,20 @@ function sort(engine: Engine, table: Variable, by: Variable): Variable[]
     return [{ data_type: DataType.Table, table: new Map(numbered_entries) }]
 }
 
+function first(_: Engine, table: Variable): Variable[]
+{
+    if (table.table == undefined)
+        return [nil]
+
+    const key = table.table.keys().next().value
+    if (typeof key == 'string')
+        return [make_string(key)]
+    else if (typeof key == 'number')
+        return [make_number(key)]
+    else
+        return [nil]
+}
+
 export function std_lib(): Map<string, Variable>
 {
     return new Map([
@@ -118,6 +132,7 @@ export function std_lib(): Map<string, Variable>
         ['len', { data_type: DataType.NativeFunction, native_function: len }],
         ['is_empty', { data_type: DataType.NativeFunction, native_function: is_empty }],
         ['sort', { data_type: DataType.NativeFunction, native_function: sort }],
+        ['first', { data_type: DataType.NativeFunction, native_function: first }],
     ])
 }
 
