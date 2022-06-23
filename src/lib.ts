@@ -73,12 +73,6 @@ function random(_: Engine): Variable[]
     return [{ data_type: DataType.Number, number: Math.random() }]
 }
 
-function len(_: Engine, table: Variable): Variable[]
-{
-    const len = table.table?.size ?? 1
-    return [{ data_type: DataType.Number, number: len }]
-}
-
 function is_empty(_: Engine, table: Variable): Variable[]
 {
     const len = table.table?.size ?? 0
@@ -169,20 +163,110 @@ function values(_: Engine, table: Variable): Variable[]
     return [{ data_type: DataType.Table, table: new Map(entries) }]
 }
 
+function to_number(_: Engine, arg: Variable): Variable[]
+{
+    switch (arg.data_type)
+    {
+        case DataType.Number:
+            return [arg]
+        case DataType.String:
+            return [make_number(parseFloat(arg.string ?? '0'))]
+        default:
+            return [nil]
+    }
+}
+
+function to_string(_: Engine, arg: Variable): Variable[]
+{
+    return [make_string(variable_to_string(arg))]
+}
+
+function string_byte(_: Engine, s: Variable, i?: Variable, j?: Variable): Variable[]
+{
+    if (s.string == undefined)
+        return [nil]
+
+    const start = i?.number ?? 1
+    const end = j?.number ?? start
+    const bytes: Variable[] = []
+    for (let index = start - 1; index <= end - 1; index++)
+        bytes.push(make_number(s.string.charCodeAt(index)))
+    return bytes
+}
+
+function string_char(_: Engine, ...chars: Variable[]): Variable[]
+{
+    const s = String.fromCharCode(...chars
+        .filter(x => x.number != undefined)
+        .map(c => c.number ?? 0))
+    return [make_string(s)]
+}
+
+function string_find(_: Engine, s: Variable, pattern: Variable, init?: Variable, plain?: Variable): Variable[]
+{
+    if (s.string == undefined || pattern.string == undefined)
+        return [nil]
+
+    const offset = init?.number ?? 1
+    const str = s.string.slice(offset - 1)
+
+    if (plain?.boolean == true)
+        return [make_number(str.indexOf(pattern.string) + 1)]
+
+    const results = RegExp(pattern.string).exec(str)
+    if (results == null || results.length == 0)
+        return [nil]
+
+    const index = s.string.indexOf(results[0])
+    return [make_number(index + 1)]
+}
+
+function string_len(_: Engine, s: Variable): Variable[]
+{
+    return [s.string == undefined ? nil : make_number(s.string.length)]
+}
+
+function string_lower(_: Engine, s: Variable): Variable[]
+{
+    return [s.string == undefined ? nil : make_string(s.string.toLowerCase())]
+}
+
+function string_upper(_: Engine, s: Variable): Variable[]
+{
+    return [s.string == undefined ? nil : make_string(s.string.toUpperCase())]
+}
+
+function string_reverse(_: Engine, s: Variable): Variable[]
+{
+    return [s.string == undefined ? nil :
+        make_string(s.string.split('').reverse().join(''))]
+}
+
 export function std_lib(): Map<string, Variable>
 {
     return new Map([
         ['print', { data_type: DataType.NativeFunction, native_function: print }],
         ['ipairs', { data_type: DataType.NativeFunction, native_function: ipairs }],
+        ['pairs', { data_type: DataType.NativeFunction, native_function: ipairs }],
         ['range', { data_type: DataType.NativeFunction, native_function: range }],
         ['random', { data_type: DataType.NativeFunction, native_function: random }],
-        ['len', { data_type: DataType.NativeFunction, native_function: len }],
-        ['is_empty', { data_type: DataType.NativeFunction, native_function: is_empty }],
+        ['isempty', { data_type: DataType.NativeFunction, native_function: is_empty }],
         ['sort', { data_type: DataType.NativeFunction, native_function: sort }],
         ['find', { data_type: DataType.NativeFunction, native_function: find }],
         ['first', { data_type: DataType.NativeFunction, native_function: first }],
         ['keys', { data_type: DataType.NativeFunction, native_function: keys }],
         ['values', { data_type: DataType.NativeFunction, native_function: values }],
+        ['tonumber', { data_type: DataType.NativeFunction, native_function: to_number }],
+        ['tostring', { data_type: DataType.NativeFunction, native_function: to_string }],
+        ['string', { data_type: DataType.Table, table: new Map([
+            ['byte', { data_type: DataType.NativeFunction, native_function: string_byte }],
+            ['char', { data_type: DataType.NativeFunction, native_function: string_char }],
+            ['find', { data_type: DataType.NativeFunction, native_function: string_find }],
+            ['len', { data_type: DataType.NativeFunction, native_function: string_len }],
+            ['lower', { data_type: DataType.NativeFunction, native_function: string_lower }],
+            ['upper', { data_type: DataType.NativeFunction, native_function: string_upper }],
+            ['reverse', { data_type: DataType.NativeFunction, native_function: string_reverse }],
+        ]) }],
     ])
 }
 

@@ -77,3 +77,31 @@ test('Values', () =>
     expect(y?.table?.get(3)).toEqual(make_number(4))
 })
 
+test('String functions', () =>
+{
+    const lua = new Engine(`
+        a = tonumber("42")
+        b = tostring(42)
+
+        c = string.byte("Test")
+        d = string.find("Test", "e.")
+        e = string.len("Test")
+        f = string.upper("Test")
+        g = string.lower("Test")
+        h = string.reverse("Test")
+        i = string.char(97, 98, 99)
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    expect(lua.global('a')).toEqual(make_number(42))
+    expect(lua.global('b')).toEqual(make_string('42'))
+
+    expect(lua.global('c')).toEqual(make_number('T'.charCodeAt(0)))
+    expect(lua.global('d')).toEqual(make_number(2))
+    expect(lua.global('e')).toEqual(make_number(4))
+    expect(lua.global('f')).toEqual(make_string('TEST'))
+    expect(lua.global('g')).toEqual(make_string('test'))
+    expect(lua.global('h')).toEqual(make_string('tseT'))
+    expect(lua.global('i')).toEqual(make_string('abc'))
+})
+
