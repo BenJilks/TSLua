@@ -1,5 +1,5 @@
 import { Engine, DataType } from '../index'
-import { make_number, make_string } from '../src/runtime'
+import { make_boolean, make_number, make_string, nil } from '../src/runtime'
 
 test('Sort', () =>
 {
@@ -91,6 +91,9 @@ test('String functions', () =>
         h = string.reverse("Test")
         i = string.char(97, 98, 99)
         j = string.format("Test %d formatting %s", 2, "args")
+
+        k = string.rep("r", 3, ",")
+        l = string.sub("Hello, Lua!", 8, 10)
     `)
     expect(lua.run()).not.toBeInstanceOf(Error)
 
@@ -105,6 +108,9 @@ test('String functions', () =>
     expect(lua.global('h')).toEqual(make_string('tseT'))
     expect(lua.global('i')).toEqual(make_string('abc'))
     expect(lua.global('j')).toEqual(make_string('Test 2 formatting args'))
+
+    expect(lua.global('k')).toEqual(make_string('r,r,r'))
+    expect(lua.global('l')).toEqual(make_string('Lua'))
 })
 
 test('Table functions', () =>
@@ -127,5 +133,70 @@ test('Table functions', () =>
     expect([...lua.global('b')?.table?.values() ?? []].map(x => x.string)).toEqual(['a', 'c'])
     expect(lua.global('c')).toEqual(make_string('a'))
     expect(lua.global('d')).toEqual(make_string('c'))
+})
+
+test('Math functions', () =>
+{
+    const lua = new Engine(`
+        a = math.abs(-2)
+        b = math.acos(3)
+        c = math.asin(3)
+        d = math.atan(3)
+        e = math.ceil(1.1)
+        f = math.cos(3)
+        g = math.deg(3)
+        h = math.exp(3)
+        i = math.floor(1.9)
+        j = math.fmod(1, 2)
+        k = math.log(2, 4)
+        l = math.max(1, 3, 2)
+        m = math.min(9, 3, -3)
+        n, nn = math.modf(3.442)
+        p = math.rad(3)
+        r = math.randomseed(1, 2)
+        q = math.random()
+        s = math.sin(3)
+        t = math.sqrt(4)
+        u = math.tan(3)
+        v = math.tointeger(4.6)
+        w = math.type(2)
+        x = math.ult(1, -1)
+
+        pi = math.pi
+        maxinteger = math.maxinteger
+        mininteger = math.mininteger
+        huge = math.huge
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    expect(lua.global('a')).toEqual(make_number(2))
+    expect(lua.global('b')).toEqual(make_number(Math.acos(3)))
+    expect(lua.global('c')).toEqual(make_number(Math.asin(3)))
+    expect(lua.global('d')).toEqual(make_number(Math.atan(3)))
+    expect(lua.global('e')).toEqual(make_number(2))
+    expect(lua.global('f')).toEqual(make_number(Math.cos(3)))
+    expect(lua.global('g')?.number).toBeCloseTo(171.88733853924697, 5)
+    expect(lua.global('h')).toEqual(make_number(Math.exp(3)))
+    expect(lua.global('i')).toEqual(make_number(1))
+    expect(lua.global('j')).toEqual(make_number(1))
+    expect(lua.global('k')).toEqual(make_number(0.5))
+    expect(lua.global('l')).toEqual(make_number(3))
+    expect(lua.global('m')).toEqual(make_number(-3))
+    expect(lua.global('n')).toEqual(make_number(3))
+    expect(lua.global('nn')?.number).toBeCloseTo(0.442, 3)
+    expect(lua.global('p')?.number).toBeCloseTo(0.05235987755982989, 5)
+    expect(lua.global('r')).toBe(nil)
+    expect(lua.global('q')?.number).toBeCloseTo(0.005859375234194886, 5)
+    expect(lua.global('s')).toEqual(make_number(Math.sin(3)))
+    expect(lua.global('t')).toEqual(make_number(Math.sqrt(4)))
+    expect(lua.global('u')).toEqual(make_number(Math.tan(3)))
+    expect(lua.global('v')).toEqual(make_number(4))
+    expect(lua.global('w')).toEqual(make_string('integer'))
+    expect(lua.global('x')).toEqual(make_boolean(true))
+
+    expect(lua.global('pi')).toEqual(make_number(Math.PI))
+    expect(lua.global('maxinteger')).toEqual(make_number(0xFFFFFFFF))
+    expect(lua.global('mininteger')).toEqual(make_number(~(0xFFFFFFFF - 1)))
+    expect(lua.global('huge')).toEqual(make_number(Infinity))
 })
 
