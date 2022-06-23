@@ -85,6 +85,16 @@ function is_empty(_: Engine, table: Variable): Variable[]
     return [{ data_type: DataType.Boolean, boolean: len == 0 }]
 }
 
+function key_variable(key: number | string): Variable
+{
+    if (typeof key == 'number')
+        return make_number(key)
+    else if (typeof key == 'string')
+        return make_string(key)
+    else
+        return nil
+}
+
 function sort(engine: Engine, table: Variable, by: Variable): Variable[]
 {
     const entries: [string | number, Variable][] = [...table.table?.entries() ?? []]
@@ -97,15 +107,32 @@ function sort(engine: Engine, table: Variable, by: Variable): Variable[]
         return result.at(0)?.number ?? 0
     })
 
-    const numbered_entries: [number, Variable][] = entries.map(([key, _], i) =>
+    const numbered_entries = entries.map(([key, _], i) => [i + 1, key_variable(key)] as const)
+    return [{ data_type: DataType.Table, table: new Map(numbered_entries) }]
+}
+
+function find(engine: Engine, table: Variable, matches: Variable): Variable[]
+{
+    const entries: [string | number, Variable][] = [...table.table?.entries() ?? []]
+    const found = entries.find(([_, a]) =>
     {
-        if (typeof key == 'number')
-            return [i + 1, make_number(key)]
-        else
-            return [i + 1, make_string(key)]
+        const result = engine.call(matches, a)
+        if (result instanceof Error)
+            return 0
+
+        return result.at(0)?.boolean ?? 0
     })
 
-    return [{ data_type: DataType.Table, table: new Map(numbered_entries) }]
+    if (found == undefined)
+        return [nil]
+
+    const [key, _] = found
+    if (typeof key == 'number')
+        return [make_number(key)]
+    else if (typeof key == 'string')
+        return [make_string(key)]
+    else
+        return [nil]
 }
 
 function first(_: Engine, table: Variable): Variable[]
@@ -122,6 +149,26 @@ function first(_: Engine, table: Variable): Variable[]
         return [nil]
 }
 
+function keys(_: Engine, table: Variable): Variable[]
+{
+    if (table.table == undefined)
+        return [nil]
+
+    const keys = [...table.table.keys()]
+    const entries = keys.map((key, i) => [i + 1, key_variable(key)] as const)
+    return [{ data_type: DataType.Table, table: new Map(entries) }]
+}
+
+function values(_: Engine, table: Variable): Variable[]
+{
+    if (table.table == undefined)
+        return [nil]
+
+    const values = [...table.table.values()]
+    const entries = values.map((value, i) => [i + 1, value] as const)
+    return [{ data_type: DataType.Table, table: new Map(entries) }]
+}
+
 export function std_lib(): Map<string, Variable>
 {
     return new Map([
@@ -132,7 +179,10 @@ export function std_lib(): Map<string, Variable>
         ['len', { data_type: DataType.NativeFunction, native_function: len }],
         ['is_empty', { data_type: DataType.NativeFunction, native_function: is_empty }],
         ['sort', { data_type: DataType.NativeFunction, native_function: sort }],
+        ['find', { data_type: DataType.NativeFunction, native_function: find }],
         ['first', { data_type: DataType.NativeFunction, native_function: first }],
+        ['keys', { data_type: DataType.NativeFunction, native_function: keys }],
+        ['values', { data_type: DataType.NativeFunction, native_function: values }],
     ])
 }
 
