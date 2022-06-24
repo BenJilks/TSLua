@@ -200,3 +200,31 @@ test('Math functions', () =>
     expect(lua.global('huge')).toEqual(make_number(Infinity))
 })
 
+test('Itorator functions', () =>
+{
+    const lua = new Engine(`
+        arr = table.pack("a", "b", "c")
+
+        pair_output = ""
+        for k, v in pairs(arr) do
+            pair_output = pair_output .. k .. "=" .. v .. ","
+        end
+
+        ipair_output = ""
+        for i, v in ipairs(arr) do
+            ipair_output = ipair_output .. i .. "=" .. v .. ","
+        end
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    const pair_output = lua.global('pair_output')
+    expect(pair_output).toBeDefined()
+    expect(pair_output?.data_type).toBe(DataType.String)
+    expect(pair_output?.string).toBe('1=a,2=b,3=c,n=3,')
+
+    const ipair_output = lua.global('ipair_output')
+    expect(ipair_output).toBeDefined()
+    expect(ipair_output?.data_type).toBe(DataType.String)
+    expect(ipair_output?.string).toBe('1=a,2=b,3=c,')
+})
+
