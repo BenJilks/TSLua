@@ -277,6 +277,38 @@ export class Engine
                 break
             }
 
+            case OpCode.IterUpdateState:
+            {
+                this.stack[this.stack.length - 2] = this.stack[this.stack.length - 1]
+                break
+            }
+
+            case OpCode.IterNext:
+            {
+                const state = this.stack[this.stack.length - 1]
+                const control = this.stack[this.stack.length - 2]
+                const iter = this.stack[this.stack.length - 3]
+                if (iter.native_function != undefined)
+                {
+                    this.stack.push(...iter.native_function(this, control, state))
+                    break
+                }
+
+                this.stack.push(control, state, make_number(2))
+                this.call_stack.push(this.ip)
+                this.locals_stack.push(new Map())
+                this.locals_capture = iter.locals ?? []
+                this.ip = iter.function_id ?? this.ip
+                break
+            }
+
+            case OpCode.IterJumpIfDone:
+            {
+                if (this.stack[this.stack.length - 1].data_type == DataType.Nil)
+                    this.ip += arg?.number ?? 0
+                break
+            }
+
             case OpCode.Add: this.operation((x, y) => x + y); break
             case OpCode.Subtract: this.operation((x, y) => x - y); break
             case OpCode.Multiply: this.operation((x, y) => x * y); break
@@ -334,7 +366,7 @@ export class Engine
             case OpCode.Not: this.stack.push(make_boolean(!is_true(this.stack.pop()))); break
             case OpCode.BitNot: this.stack.push(make_number(~(this.stack.pop()?.number ?? 0))); break
             case OpCode.Negate: this.stack.push(make_number(-(this.stack.pop()?.number ?? 0))); break
-            case OpCode.IsNil: this.stack.push(make_boolean((this.stack.pop() ?? nil) == nil)); break
+            case OpCode.IsNotNil: this.stack.push(make_boolean((this.stack.pop() ?? nil) != nil)); break
             case OpCode.Jump: this.ip += arg?.number ?? 0; break
             case OpCode.JumpIfNot: if (!is_true(this.stack.pop())) { this.ip += arg?.number ?? 0 } break
             case OpCode.MakeLocal: this.locals_stack.at(-1)?.set(arg?.string ?? '', nil); break

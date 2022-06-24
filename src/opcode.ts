@@ -9,6 +9,10 @@ export enum OpCode {
     Dup,
     Swap,
 
+    IterUpdateState,
+    IterNext,
+    IterJumpIfDone,
+
     NewTable,
     LoadIndex,
     StoreIndex,
@@ -41,7 +45,7 @@ export enum OpCode {
     Not,
     Negate,
     Length,
-    IsNil,
+    IsNotNil,
 
     StartBlock,
     EndBlock,
@@ -67,6 +71,9 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Pop: return 'Pop'
         case OpCode.Dup: return 'Dup'
         case OpCode.Swap: return 'Swap'
+        case OpCode.IterUpdateState: return 'IterUpdateState'
+        case OpCode.IterNext: return 'IterNext'
+        case OpCode.IterJumpIfDone: return 'IterJumpIfDone'
         case OpCode.NewTable: return 'NewTable'
         case OpCode.LoadIndex: return 'LoadIndex'
         case OpCode.StoreIndex: return 'StoreIndex'
@@ -95,7 +102,7 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Not: return 'Not'
         case OpCode.Negate: return 'Negate'
         case OpCode.Length: return 'Length'
-        case OpCode.IsNil: return 'IsNil'
+        case OpCode.IsNotNil: return 'IsNotNil'
         case OpCode.StartBlock: return 'StartBlock'
         case OpCode.EndBlock: return 'EndBlock'
         case OpCode.MakeLocal: return 'MakeLocal'
