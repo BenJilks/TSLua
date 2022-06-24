@@ -1,9 +1,9 @@
 import { Op, OpCode, op_code_name } from './opcode'
 import { DataType, NativeFunction, Variable, nil, make_number, make_boolean, make_string } from './runtime'
-import * as std from './lib'
 import { TokenStream } from './lexer'
 import { parse } from './parser'
 import { compile } from './compiler'
+import * as std from './lib'
 
 function index(val: Variable | undefined): string | number | undefined
 {
@@ -255,52 +255,24 @@ export class Engine
         switch(code)
         {
             case OpCode.Pop:
-                for (let i = 0; i < (arg?.number ?? 1); i++)
-                    this.stack.pop()
+            {
+                const count = arg?.number ?? 1
+                this.stack.splice(this.stack.length - count, count)
                 break
+            }
 
             case OpCode.Dup:
             { 
                 const count = arg?.number ?? 1
-                const items = this.stack
-                    .splice(this.stack.length - count, count)
+                const items = this.stack.splice(this.stack.length - count, count)
                 this.stack.push(...items, ...items)
                 break
             }
 
             case OpCode.Swap:
             { 
-                const offset = arg?.number ?? 0
-                this.stack.push(...this.stack
-                    .splice(this.stack.length - offset - 2, 1))
-                break
-            }
-
-            case OpCode.LoadIndex:
-            {
-                const table = this.stack.pop()
-                if (table?.data_type == DataType.Nil)
-                {
-                    this.stack.pop() // Pop index
-                    this.stack.push(nil)
-                    break
-                }
-
-                if (table == undefined || table.table == undefined)
-                    return this.runtime_error(op, 'Can only index on tables')
-
-                const i_var = this.stack.pop()
-                if (i_var?.data_type == DataType.Nil)
-                {
-                    this.stack.push(nil)
-                    break
-                }
-
-                const i = index(i_var)
-                if (i == undefined)
-                    return this.runtime_error(op, 'Invalid index, must be a number or string')
-
-                this.stack.push(table.table.get(i) ?? nil)
+                const x = this.stack.splice(this.stack.length - 2, 1)
+                this.stack.push(...x)
                 break
             }
 
@@ -387,6 +359,34 @@ export class Engine
                 break
             }
 
+            case OpCode.LoadIndex:
+            {
+                const table = this.stack.pop()
+                if (table?.data_type == DataType.Nil)
+                {
+                    this.stack.pop() // Pop index
+                    this.stack.push(nil)
+                    break
+                }
+
+                if (table == undefined || table.table == undefined)
+                    return this.runtime_error(op, 'Can only index on tables')
+
+                const i_var = this.stack.pop()
+                if (i_var?.data_type == DataType.Nil)
+                {
+                    this.stack.push(nil)
+                    break
+                }
+
+                const i = index(i_var)
+                if (i == undefined)
+                    return this.runtime_error(op, 'Invalid index, must be a number or string')
+
+                this.stack.push(table.table.get(i) ?? nil)
+                break
+            }
+
             case OpCode.StoreIndex:
             {
                 const count = arg?.number ?? 1
@@ -403,6 +403,7 @@ export class Engine
 
                     table.table.set(key, value)
                 }
+
                 break
             }
 
@@ -410,22 +411,14 @@ export class Engine
             {
                 const name = arg?.string ?? ''
                 const value = this.stack.pop() ?? nil
+                const local = [...this.locals_capture, ...this.locals_stack]
+                    .reverse()
+                    .find(x => x.has(name))
 
-                let did_find = false
-                for (const locals of [...this.locals_capture, ...this.locals_stack].reverse())
-                {
-                    if (locals.has(name))
-                    {
-                        did_find = true
-                        locals.set(name, value)
-                        break
-                    }
-                }
-
-                if (did_find)
-                    break
-
-                this.globals.set(name, value)
+                if (local != undefined)
+                    local.set(name, value)
+                else
+                    this.globals.set(name, value)
                 break
             }
 
@@ -440,23 +433,13 @@ export class Engine
             case OpCode.Load:
             {
                 const name = arg?.string ?? ''
-                let did_find = false
-                for (const locals of [...this.locals_capture, ...this.locals_stack].reverse())
-                {
-                    const local = locals.get(name)
-                    if (local != undefined && local.data_type != DataType.Nil)
-                    {
-                        did_find = true
-                        this.stack.push(local)
-                        break
-                    }
-                }
+                const local = [...this.locals_capture, ...this.locals_stack]
+                    .reverse()
+                    .map(x => x.get(name))
+                    .find(x => x != undefined && x.data_type != DataType.Nil)
 
-                if (did_find)
-                    break
-
-                const value = this.globals.get(name)
-                this.stack.push(value ?? nil)
+                const global = this.globals.get(name)
+                this.stack.push(local ?? global ?? nil)
                 break
             }
 
@@ -464,19 +447,34 @@ export class Engine
             {
                 const count = this.stack.pop()?.number ?? 0
                 const func_var = this.stack.pop() ?? nil
-
-                if (func_var.native_function != undefined)
+                switch (func_var.data_type)
                 {
-                    const args = this.stack.splice(this.stack.length - count, count)
-                    this.stack.push(...func_var.native_function(this, ...args))
-                    break
+                    case DataType.NativeFunction:
+                    {
+                        const args = this.stack.splice(this.stack.length - count, count)
+                        if (func_var.native_function != undefined)
+                            this.stack.push(...func_var.native_function(this, ...args))
+                        break
+                    }
+
+                    case DataType.Function:
+                    {
+                        this.stack.push(make_number(count))
+                        this.call_stack.push(this.ip)
+                        this.locals_stack.push(new Map())
+                        this.locals_capture = func_var.locals ?? []
+                        this.ip = func_var.function_id ?? this.ip
+                        break
+                    }
+
+                    default:
+                    {
+                        return this.runtime_error(op,
+                            `Object of type '${ std.type_name(func_var.data_type) }' ` +
+                            'is not callable')
+                    }
                 }
 
-                this.stack.push(make_number(count))
-                this.call_stack.push(this.ip)
-                this.locals_stack.push(new Map())
-                this.locals_capture = func_var.locals ?? []
-                this.ip = func_var.function_id ?? this.ip
                 break
             }
 
@@ -492,8 +490,10 @@ export class Engine
             }
 
             case OpCode.AssignPush:
+            {
                 this.assign_height_stack.push(this.stack.length)
                 break
+            }
 
             case OpCode.AssignSet:
             {

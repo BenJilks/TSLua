@@ -42,6 +42,20 @@ export function variable_to_string(variable: Variable, tables_done: Variable[] =
     }
 }
 
+export function type_name(data_type: DataType): string
+{
+    switch (data_type)
+    {
+        case DataType.Nil: return 'nil'
+        case DataType.Boolean: return 'boolean'
+        case DataType.Number: return 'number'
+        case DataType.String: return 'string'
+        case DataType.Function: return 'function'
+        case DataType.NativeFunction: return 'function'
+        case DataType.Table: return 'table'
+    }
+}
+
 function print(_: Engine, ...args: Variable[]): Variable[]
 {
     console.log(...args.map(arg => variable_to_string(arg)))
@@ -50,16 +64,7 @@ function print(_: Engine, ...args: Variable[]): Variable[]
 
 function type(_: Engine, v: Variable): Variable[]
 {
-    switch (v.data_type)
-    {
-        case DataType.Nil: return [make_string('nil')]
-        case DataType.Boolean: return [make_string('boolean')]
-        case DataType.Number: return [make_string('number')]
-        case DataType.String: return [make_string('string')]
-        case DataType.Function: return [make_string('function')]
-        case DataType.NativeFunction: return [make_string('function')]
-        case DataType.Table: return [make_string('table')]
-    }
+    return [make_string(type_name(v.data_type))]
 }
 
 function ipairs(_: Engine, table: Variable): Variable[]

@@ -268,12 +268,12 @@ test('All operators', () =>
 test('Tables', () =>
 {
     const lua = new Engine(`
-        table = { "a", "b", c = false, ["x" .. "y"] = "expr" }
+        x = { "a", "b", c = false, ["x" .. "y"] = "expr" }
         
-        b = table[2]
-        c = table["xy"]
-        table["test"] = 42
-        table.d = true
+        b = x[2]
+        c = x["xy"]
+        x["test"] = 42
+        x.d = true
     `)
     expect(lua.run()).not.toBeInstanceOf(Error)
 
@@ -287,15 +287,15 @@ test('Tables', () =>
     expect(c?.data_type).toBe(DataType.String)
     expect(c?.string).toBe('expr')
 
-    const table = lua.global('table')
-    expect(table).not.toBeUndefined()
-    expect(table?.data_type).toBe(DataType.Table)
-    expect(table?.table?.has(1)).toBeTruthy()
-    expect(table?.table?.has(2)).toBeTruthy()
-    expect(table?.table?.has(3)).toBeFalsy()
-    expect(table?.table?.has('c')).toBeTruthy()
-    expect(table?.table?.has('test')).toBeTruthy()
-    expect(table?.table?.has('d')).toBeTruthy()
+    const x = lua.global('x')
+    expect(x).not.toBeUndefined()
+    expect(x?.data_type).toBe(DataType.Table)
+    expect(x?.table?.has(1)).toBeTruthy()
+    expect(x?.table?.has(2)).toBeTruthy()
+    expect(x?.table?.has(3)).toBeFalsy()
+    expect(x?.table?.has('c')).toBeTruthy()
+    expect(x?.table?.has('test')).toBeTruthy()
+    expect(x?.table?.has('d')).toBeTruthy()
 })
 
 test('Sub-expressions', () =>
