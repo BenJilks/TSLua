@@ -197,14 +197,14 @@ export class Engine
         this.locals_stack.push(new Map())
         
         const result = this.run()
-        if (result instanceof Error)
-            return result
-
         const return_values = this.stack
         this.stack = old_stack
         this.call_stack = old_call_stack
         this.locals_stack = old_locals_stack
         this.ip = old_ip
+        if (result instanceof Error)
+            return result
+
         return return_values
     }
 
