@@ -222,10 +222,10 @@ function compile_assignment(assignment: Assignment | undefined, functions: Op[][
     
     const ops: Op[] = []
     const debug = assignment.token.debug
-    ops.push({ code: OpCode.AssignPush, debug: debug })
+    ops.push({ code: OpCode.StartStackChange, debug: debug })
     for (const rhs of assignment.rhs)
         ops.push(...compile_expression(rhs, functions))
-    ops.push({ code: OpCode.AssignSet, arg: make_number(assignment.lhs.length), debug: debug })
+    ops.push({ code: OpCode.EndStackChange, arg: make_number(assignment.lhs.length), debug: debug })
 
     for (const lhs of assignment.lhs)
     {
@@ -364,16 +364,16 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
 
     const debug = for_block.token.debug
     ops.push({ code: OpCode.StartBlock, debug: debug })
-    ops.push({ code: OpCode.AssignPush, debug: debug })
+    ops.push({ code: OpCode.StartStackChange, debug: debug })
     ops.push(...compile_expression(for_block.itorator, functions))
-    ops.push({ code: OpCode.AssignSet, arg: make_number(3), debug: debug })
+    ops.push({ code: OpCode.EndStackChange, arg: make_number(3), debug: debug })
 
     const after_creating_itorator = ops.length
-    ops.push({ code: OpCode.AssignPush, debug: debug })
+    ops.push({ code: OpCode.StartStackChange, debug: debug })
     ops.push({ code: OpCode.IterNext, debug: debug })
     ops.push({ code: OpCode.IterJumpIfDone, arg: make_number(body.length + for_block.items.length + 3), debug: debug })
 
-    ops.push({ code: OpCode.AssignSet, arg: make_number(for_block.items.length), debug: debug })
+    ops.push({ code: OpCode.EndStackChange, arg: make_number(for_block.items.length), debug: debug })
     for (const [i, item] of [...for_block.items].reverse().entries())
     {
         if (i == for_block.items.length - 1)
@@ -383,7 +383,7 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
     ops.push(...body)
     ops.push({ code: OpCode.Jump, arg: make_number(-ops.length + after_creating_itorator - 1), debug: debug })
 
-    ops.push({ code: OpCode.AssignSet, arg: make_number(0), debug: debug })
+    ops.push({ code: OpCode.EndStackChange, arg: make_number(0), debug: debug })
     ops.push({ code: OpCode.Pop, arg: make_number(3), debug: debug })
     ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops

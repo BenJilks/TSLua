@@ -55,8 +55,8 @@ export enum OpCode {
     Jump,
     JumpIfNot,
 
-    AssignPush,
-    AssignSet,
+    StartStackChange,
+    EndStackChange,
     ArgumentCount,
     Break,
 }
@@ -110,8 +110,8 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Return: return 'Return'
         case OpCode.Jump: return 'Jump'
         case OpCode.JumpIfNot: return 'JumpIfNot'
-        case OpCode.AssignPush: return 'AssignPush'
-        case OpCode.AssignSet: return 'AssignSet'
+        case OpCode.StartStackChange: return 'StartStackChange'
+        case OpCode.EndStackChange: return 'EndStackChange'
         case OpCode.ArgumentCount: return 'ArgumentCount'
         case OpCode.Break: return 'Break[Debug]'
         default:

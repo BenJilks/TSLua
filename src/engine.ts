@@ -245,6 +245,14 @@ export class Engine
         this.stack.push(make_boolean(op(x, y)))
     }
 
+    private force_stack_height(expected: number, got: number)
+    {
+        for (let i = got; i < expected; i++)
+            this.stack.push(nil)
+        for (let i = expected; i < got; i++)
+            this.stack.pop()
+    }
+
     private runtime_error(op: Op, message: string): Error
     {
         return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
@@ -515,27 +523,21 @@ export class Engine
             {
                 const got = this.stack.pop()?.number ?? 0
                 const expected = arg?.number ?? 0
-                for (let i = got; i < expected; i++)
-                    this.stack.push(nil)
-                for (let i = expected; i < got; i++)
-                    this.stack.pop()
+                this.force_stack_height(expected, got)
                 break
             }
 
-            case OpCode.AssignPush:
+            case OpCode.StartStackChange:
             {
                 this.assign_height_stack.push(this.stack.length)
                 break
             }
 
-            case OpCode.AssignSet:
+            case OpCode.EndStackChange:
             {
-                const value_count = this.stack.length - (this.assign_height_stack.pop() ?? 0)
+                const got = this.stack.length - (this.assign_height_stack.pop() ?? 0)
                 const expected = arg?.number ?? 0
-                for (let i = value_count; i < expected; i++)
-                    this.stack.push(nil)
-                for (let i = expected; i < value_count; i++)
-                    this.stack.pop()
+                this.force_stack_height(expected, got)
                 break
             }
         }
