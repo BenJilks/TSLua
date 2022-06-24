@@ -86,11 +86,11 @@ export class Engine
     private ip: number
     private stack: Variable[]
     private locals_stack: Map<string, Variable>[]
+    private locals_capture: Map<string, Variable>[]
     private call_stack: number[]
-    private locals: Map<string, Variable>
+    private assign_height_stack: number[]
 
     private error: Error | undefined
-    private assign_stack_heigth: number
 
     constructor(script?: string,
                 globals?: Map<string, Variable>)
@@ -164,12 +164,14 @@ export class Engine
 
     reset()
     {
-        this.assign_stack_heigth = 0
         this.ip = this.start_ip
         this.stack = []
         this.locals_stack = []
+        this.locals_capture = []
         this.call_stack = []
-        this.locals = new Map()
+        this.assign_height_stack = []
+
+        this.locals_stack.push(new Map())
     }
 
     call(func: Variable, ...args: Variable[]): Variable[] | Error
@@ -183,14 +185,14 @@ export class Engine
         const old_stack = this.stack
         const old_call_stack = this.call_stack
         const old_ip = this.ip
+        const old_locals_stack = this.locals_stack
         this.stack = []
         this.call_stack = []
 
         for (const arg of args)
             this.stack.push(arg)
         this.stack.push(make_number(args.length))
-        this.locals_stack.push(this.locals)
-        this.locals = func.locals ?? new Map()
+        this.locals_stack = func.locals ?? []
         this.ip = func.function_id ?? this.ip
         
         const result = this.run()
@@ -200,7 +202,7 @@ export class Engine
         const return_values = this.stack
         this.stack = old_stack
         this.call_stack = old_call_stack
-        this.locals = this.locals_stack.pop() ?? new Map()
+        this.locals_stack = old_locals_stack
         this.ip = old_ip
         return return_values
     }
@@ -211,7 +213,7 @@ export class Engine
             return this.error
 
         if (options?.locals != undefined)
-            this.locals = options.locals
+            this.locals_stack.push(options.locals)
 
         let step_count = 0
         while (this.ip < this.program.length)
@@ -242,20 +244,6 @@ export class Engine
         this.stack.push(make_boolean(op(x, y)))
     }
 
-    private capture_locals(): Map<string, Variable>
-    {
-        const captured = new Map()
-        for (const locals of this.locals_stack.reverse())
-        {
-            for (const [name, value] of locals.entries())
-                captured.set(name, value)
-        }
-
-        for (const [name, value] of this.locals.entries())
-            captured.set(name, value)
-        return captured
-    }
-
     private runtime_error(op: Op, message: string): Error
     {
         return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
@@ -267,21 +255,24 @@ export class Engine
         switch(code)
         {
             case OpCode.Pop:
-                this.stack.pop()
+                for (let i = 0; i < (arg?.number ?? 1); i++)
+                    this.stack.pop()
                 break
 
             case OpCode.Dup:
             { 
-                const x = this.stack.pop() ?? nil
-                this.stack.push(x, x)
+                const count = arg?.number ?? 1
+                const items = this.stack
+                    .splice(this.stack.length - count, count)
+                this.stack.push(...items, ...items)
                 break
             }
 
             case OpCode.Swap:
             { 
-                const x = this.stack.pop() ?? nil
-                const y = this.stack.pop() ?? nil
-                this.stack.push(x, y)
+                const offset = arg?.number ?? 0
+                this.stack.push(...this.stack
+                    .splice(this.stack.length - offset - 2, 1))
                 break
             }
 
@@ -373,17 +364,10 @@ export class Engine
             case OpCode.IsNil: this.stack.push(make_boolean((this.stack.pop() ?? nil) == nil)); break
             case OpCode.Jump: this.ip += arg?.number ?? 0; break
             case OpCode.JumpIfNot: if (!is_true(this.stack.pop())) { this.ip += arg?.number ?? 0 } break
-            case OpCode.MakeLocal: this.locals.set(arg?.string ?? '', nil); break
+            case OpCode.MakeLocal: this.locals_stack.at(-1)?.set(arg?.string ?? '', nil); break
             case OpCode.NewTable: this.stack.push({ data_type: DataType.Table, table: new Map() }); break
-
-            case OpCode.StartBlock:
-                this.locals_stack.push(this.locals)
-                this.locals = new Map()
-                break
-
-            case OpCode.EndBlock:
-                this.locals = this.locals_stack.pop() ?? new Map()
-                break
+            case OpCode.StartBlock: this.locals_stack.push(new Map()); break
+            case OpCode.EndBlock: this.locals_stack.pop(); break
 
             case OpCode.Length:
             {
@@ -397,14 +381,9 @@ export class Engine
 
             case OpCode.Return:
             {
-                if (this.call_stack.length == 0)
-                {
-                    this.ip = this.program.length
-                    break
-                }
-
                 this.ip = this.call_stack.pop() ?? this.program.length
-                this.locals = this.locals_stack.pop() ?? new Map()
+                this.locals_stack.pop()
+                this.locals_capture = []
                 break
             }
 
@@ -431,15 +410,9 @@ export class Engine
             {
                 const name = arg?.string ?? ''
                 const value = this.stack.pop() ?? nil
-                if (this.locals.has(name))
-                {
-                    this.locals.set(name, value)
-                    break
-                }
-
 
                 let did_find = false
-                for (const locals of this.locals_stack)
+                for (const locals of [...this.locals_capture, ...this.locals_stack].reverse())
                 {
                     if (locals.has(name))
                     {
@@ -459,7 +432,7 @@ export class Engine
             case OpCode.Push:
             {
                 if (this.locals_stack.length > 0 && arg?.data_type == DataType.Function)
-                    arg.locals = this.capture_locals()
+                    arg.locals = [...this.locals_stack]
                 this.stack.push(arg ?? nil)
                 break
             }
@@ -467,18 +440,11 @@ export class Engine
             case OpCode.Load:
             {
                 const name = arg?.string ?? ''
-                const local = this.locals.get(name)
-                if (local != undefined)
-                {
-                    this.stack.push(local)
-                    break
-                }
-
                 let did_find = false
-                for (const locals of this.locals_stack)
+                for (const locals of [...this.locals_capture, ...this.locals_stack].reverse())
                 {
                     const local = locals.get(name)
-                    if (local != undefined)
+                    if (local != undefined && local.data_type != DataType.Nil)
                     {
                         did_find = true
                         this.stack.push(local)
@@ -489,14 +455,8 @@ export class Engine
                 if (did_find)
                     break
 
-                const global = this.globals.get(name)
-                if (global != undefined)
-                {
-                    this.stack.push(global)
-                    break
-                }
-
-                this.stack.push(nil)
+                const value = this.globals.get(name)
+                this.stack.push(value ?? nil)
                 break
             }
 
@@ -514,8 +474,8 @@ export class Engine
 
                 this.stack.push(make_number(count))
                 this.call_stack.push(this.ip)
-                this.locals_stack.push(this.locals)
-                this.locals = func_var.locals ?? new Map()
+                this.locals_stack.push(new Map())
+                this.locals_capture = func_var.locals ?? []
                 this.ip = func_var.function_id ?? this.ip
                 break
             }
@@ -524,25 +484,26 @@ export class Engine
             {
                 const got = this.stack.pop()?.number ?? 0
                 const expected = arg?.number ?? 0
-                if (got == expected)
-                    break
-
-                return this.runtime_error(op,
-                    `Execpect ${ expected } ` +
-                    `argument(s), got ${ got }`)
+                for (let i = got; i < expected; i++)
+                    this.stack.push(nil)
+                for (let i = expected; i < got; i++)
+                    this.stack.pop()
+                break
             }
 
-            case OpCode.AssignPush: this.assign_stack_heigth = this.stack.length; break
+            case OpCode.AssignPush:
+                this.assign_height_stack.push(this.stack.length)
+                break
+
             case OpCode.AssignSet:
             {
-                const value_count = this.stack.length - this.assign_stack_heigth
+                const value_count = this.stack.length - (this.assign_height_stack.pop() ?? 0)
                 const expected = arg?.number ?? 0
-                if (value_count == expected)
-                    break
-
-                return this.runtime_error(op,
-                    `Execpect to assign ${ expected } ` +
-                    `value(s), got ${ value_count } instead`)
+                for (let i = value_count; i < expected; i++)
+                    this.stack.push(nil)
+                for (let i = expected; i < value_count; i++)
+                    this.stack.pop()
+                break
             }
         }
     }

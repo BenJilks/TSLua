@@ -67,26 +67,52 @@ function ipairs(_: Engine, table: Variable): Variable[]
     if (table.data_type != DataType.Table || table.table == undefined)
         return [nil]
 
-    const entries = [...table.table.entries()]
-    let index = 0
+    let index = 1
     return [{
         data_type: DataType.NativeFunction,
         native_function: () =>
         {
-            if (index >= entries.length)
+            const key = key_variable(index)
+            const value = table.table?.get(index++)
+            if (value == undefined)
                 return [nil]
 
-            const [i, v] = entries[index++]
-            if (typeof(i) === 'number') 
-            {
-                return [{ data_type: DataType.Number, number: i }, v] 
-            }
-            else 
-            {
-                return [{ data_type: DataType.String, string: i }, v] 
-            }
+            return [key, value]
         },
     }]
+}
+
+function next(_: Engine, { table }: Variable, index?: Variable): Variable[]
+{
+    if (table == undefined)
+        return [nil]
+
+    const keys = table.keys()
+    if (index == undefined || index.data_type == DataType.Nil)
+    {
+        const first_key: number | string | undefined = keys.next().value
+        if (first_key == undefined)
+            return [nil]
+
+        return [key_variable(first_key), table.get(first_key) ?? nil]
+    }
+
+
+    let next_key: number | string | undefined = keys.next().value
+    while (next_key != undefined && next_key != index.number && next_key != index.string)
+        next_key = keys.next().value
+    
+    next_key = keys.next().value
+    if (next_key == undefined)
+        return [nil]
+
+    return [key_variable(next_key), table.get(next_key) ?? nil]
+}
+
+function pairs(_: Engine, table: Variable): Variable[]
+{
+    const next_func = { data_type: DataType.NativeFunction, native_function: next }
+    return [next_func, table, nil]
 }
 
 function range(_: Engine, count: Variable): Variable[]
@@ -617,7 +643,8 @@ export function std_lib(): Map<string, Variable>
         ['print', { data_type: DataType.NativeFunction, native_function: print }],
         ['type', { data_type: DataType.NativeFunction, native_function: type }],
         ['ipairs', { data_type: DataType.NativeFunction, native_function: ipairs }],
-        ['pairs', { data_type: DataType.NativeFunction, native_function: ipairs }],
+        ['pairs', { data_type: DataType.NativeFunction, native_function: pairs }],
+        ['next', { data_type: DataType.NativeFunction, native_function: next }],
         ['range', { data_type: DataType.NativeFunction, native_function: range }],
         ['random', { data_type: DataType.NativeFunction, native_function: random }],
         ['isempty', { data_type: DataType.NativeFunction, native_function: is_empty }],

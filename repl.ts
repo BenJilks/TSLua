@@ -182,7 +182,7 @@ async function main()
             trace: trace,
         })
 
-        if (result != undefined)
+        if (result instanceof Error)
         {
             console.error(result)
             process.exit(1)

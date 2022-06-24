@@ -51,7 +51,6 @@ export enum OpCode {
     Jump,
     JumpIfNot,
 
-    // NOTE: Debug opcode, not needed for operation.
     AssignPush,
     AssignSet,
     ArgumentCount,
@@ -104,10 +103,9 @@ export function op_code_name(op_code: OpCode): string
         case OpCode.Return: return 'Return'
         case OpCode.Jump: return 'Jump'
         case OpCode.JumpIfNot: return 'JumpIfNot'
-
-        case OpCode.AssignPush: return 'AssignPush[Debug]'
-        case OpCode.AssignSet: return 'AssignSet[Debug]'
-        case OpCode.ArgumentCount: return 'ArgumentCount[Debug]'
+        case OpCode.AssignPush: return 'AssignPush'
+        case OpCode.AssignSet: return 'AssignSet'
+        case OpCode.ArgumentCount: return 'ArgumentCount'
         case OpCode.Break: return 'Break[Debug]'
         default:
             throw new Error()

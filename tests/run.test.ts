@@ -160,7 +160,12 @@ test('Multiple values', () =>
 
             a = foo()
         `)
-        expect(lua.run()).toBeInstanceOf(Error)
+        expect(lua.run()).not.toBeInstanceOf(Error)
+
+        const a = lua.global('a')
+        expect(a).not.toBeUndefined()
+        expect(a?.data_type).toBe(DataType.Number)
+        expect(a?.number).toBe(1)
     }
 
     {
@@ -171,7 +176,16 @@ test('Multiple values', () =>
 
             a, b = foo()
         `)
-        expect(lua.run()).toBeInstanceOf(Error)
+        expect(lua.run()).not.toBeInstanceOf(Error)
+
+        const a = lua.global('a')
+        expect(a).not.toBeUndefined()
+        expect(a?.data_type).toBe(DataType.Number)
+        expect(a?.number).toBe(1)
+
+        const b = lua.global('b')
+        expect(b).not.toBeUndefined()
+        expect(b?.data_type).toBe(DataType.Nil)
     }
 })
 

@@ -364,26 +364,44 @@ function compile_for(for_block: For | undefined, functions: Op[][]): Op[]
 
     const debug = for_block.token.debug
     ops.push({ code: OpCode.StartBlock, debug: debug })
+    ops.push({ code: OpCode.MakeLocal, arg: make_string('-state'), debug: debug })
+    ops.push({ code: OpCode.MakeLocal, arg: make_string('-control'), debug: debug })
+    ops.push({ code: OpCode.MakeLocal, arg: make_string('-iter'), debug: debug })
+
+    ops.push({ code: OpCode.AssignPush, debug: debug })
     ops.push(...compile_expression(for_block.itorator, functions))
+    ops.push({ code: OpCode.AssignSet, arg: make_number(3), debug: debug })
+    ops.push({ code: OpCode.Store, arg: make_string('-state'), debug: debug })
+    ops.push({ code: OpCode.Store, arg: make_string('-control'), debug: debug })
+    ops.push({ code: OpCode.Store, arg: make_string('-iter'), debug: debug })
 
     const after_creating_itorator = ops.length
     ops.push({ code: OpCode.AssignPush, debug: debug })
-    ops.push({ code: OpCode.Dup, debug: debug })
-    ops.push({ code: OpCode.Push, arg: make_number(0), debug: debug })
+    ops.push({ code: OpCode.Load, arg: make_string('-control'), debug: debug })
+    ops.push({ code: OpCode.Load, arg: make_string('-state'), debug: debug })
+    ops.push({ code: OpCode.Load, arg: make_string('-iter'), debug: debug })
+    ops.push({ code: OpCode.Push, arg: make_number(2), debug: debug })
     ops.push({ code: OpCode.Call, debug: debug })
 
     ops.push({ code: OpCode.Dup, debug: debug })
     ops.push({ code: OpCode.IsNil, debug: debug })
     ops.push({ code: OpCode.Not, debug: debug })
-    ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + for_block.items.length + 2), debug: debug })
-    ops.push({ code: OpCode.AssignSet, arg: make_number(for_block.items.length), debug: debug })
+    ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + for_block.items.length + 4), debug: debug })
 
-    for (const item of for_block.items.reverse())
+    ops.push({ code: OpCode.AssignSet, arg: make_number(for_block.items.length), debug: debug })
+    for (const [i, item] of [...for_block.items].reverse().entries())
+    {
+        if (i == for_block.items.length - 1)
+        {
+            ops.push({ code: OpCode.Dup, debug: item.debug })
+            ops.push({ code: OpCode.Store, arg: make_string('-state'), debug: debug })
+        }
         ops.push({ code: OpCode.Store, arg: make_string(item.data), debug: item.debug })
+    }
     ops.push(...body)
     ops.push({ code: OpCode.Jump, arg: make_number(-ops.length + after_creating_itorator - 1), debug: debug })
-    ops.push({ code: OpCode.Pop, debug: debug })
-    ops.push({ code: OpCode.Pop, debug: debug })
+
+    ops.push({ code: OpCode.AssignSet, arg: make_number(0), debug: debug })
     ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops
 }

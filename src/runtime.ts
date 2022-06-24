@@ -20,7 +20,7 @@ export interface Variable {
     table?: Map<string|number, Variable>,
 
     function_id?: number,
-    locals?: Map<string, Variable>,
+    locals?: Map<string, Variable>[],
 }
 
 export const nil: Variable = { data_type: DataType.Nil }
