@@ -188,12 +188,13 @@ export class Engine
         const old_locals_stack = this.locals_stack
         this.stack = []
         this.call_stack = []
+        this.locals_stack = [...func.locals ?? []]
+        this.ip = func.function_id ?? this.ip
 
         for (const arg of args)
             this.stack.push(arg)
         this.stack.push(make_number(args.length))
-        this.locals_stack = func.locals ?? []
-        this.ip = func.function_id ?? this.ip
+        this.locals_stack.push(new Map())
         
         const result = this.run()
         if (result instanceof Error)
