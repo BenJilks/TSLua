@@ -196,7 +196,7 @@ test('Math functions', () =>
 
     expect(lua.global('pi')).toEqual(make_number(Math.PI))
     expect(lua.global('maxinteger')).toEqual(make_number(0xFFFFFFFF))
-    expect(lua.global('mininteger')).toEqual(make_number(~(0xFFFFFFFF - 1)))
+    expect(lua.global('mininteger')).toEqual(make_number(-(0xFFFFFFFF - 1)))
     expect(lua.global('huge')).toEqual(make_number(Infinity))
 })
 

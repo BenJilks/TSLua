@@ -567,7 +567,7 @@ export class Engine
             return result
 
         if (options?.trace || options?.trace_stack)
-            console.log(this.ip - 1, ...this.stack.map(std.variable_to_string))
+            console.log(this.ip - 1, ...this.stack.map(x => std.variable_to_string(x)))
     }
 
 }

@@ -17,7 +17,7 @@ export function variable_size(value: Variable): number | undefined
     }
 }
 
-export function variable_to_string(variable: Variable): string
+export function variable_to_string(variable: Variable, tables_done: Variable[] = []): string
 {
     switch (variable.data_type)
     {
@@ -29,8 +29,14 @@ export function variable_to_string(variable: Variable): string
         case DataType.NativeFunction: return `<Function ${ variable.native_function?.name ?? 'nil' }>`
         case DataType.Table: 
         {
+            if (tables_done.includes(variable))
+                return '...'
+
+            tables_done.push(variable)
             return `{ ${ [...variable.table?.entries() ?? []]
-                .map(([i, v]) => `${ i } = ${ variable_to_string(v) }`).join(', ') } }`
+                .map(([i, v]) =>
+                    `${ i } = ${ variable_to_string(v, tables_done) }`)
+                .join(', ') } }`
         }
         default: return '<Lua Object>'
     }
@@ -38,7 +44,7 @@ export function variable_to_string(variable: Variable): string
 
 function print(_: Engine, ...args: Variable[]): Variable[]
 {
-    console.log(...args.map(variable_to_string))
+    console.log(...args.map(arg => variable_to_string(arg)))
     return [nil]
 }
 
@@ -334,7 +340,7 @@ function table_concat(_: Engine, list: Variable, sep?: Variable, i?: Variable, j
     const start = i?.number ?? 1
     const result = [...list.table.values()]
         .slice(start - 1, j?.number)
-        .map(variable_to_string)
+        .map(item => variable_to_string(item))
         .join(seporator)
     return [make_string(result)]
 }
@@ -669,7 +675,7 @@ export function std_lib(): Map<string, Variable>
             
             ['pi', { data_type: DataType.Number, number: Math.PI }],
             ['maxinteger', { data_type: DataType.Number, number: 0xFFFFFFFF }],
-            ['mininteger', { data_type: DataType.Number, number: ~(0xFFFFFFFF - 1) }],
+            ['mininteger', { data_type: DataType.Number, number: -(0xFFFFFFFF - 1) }],
             ['huge', { data_type: DataType.Number, number: Infinity }],
         ]) }],
     ])
