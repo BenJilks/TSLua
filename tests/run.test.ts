@@ -11,6 +11,33 @@ test('Can run a basic script', () =>
     expect(a?.number).toBe(1)
 })
 
+test('Literals', () =>
+{
+    const lua = new Engine(`
+        a = "hello!"
+        b = 1
+        c = 5.6
+        d = 4.2e-2
+        e = 0x4Fd
+        f = true
+        g = false
+
+        h = 42x = 1
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    expect(lua.global('a')?.string).toBe('hello!')
+    expect(lua.global('b')?.number).toBe(1)
+    expect(lua.global('c')?.number).toBe(5.6)
+    expect(lua.global('d')?.number).toBe(4.2e-2)
+    expect(lua.global('e')?.number).toBe(0x4Fd)
+    expect(lua.global('f')?.boolean).toBe(true)
+    expect(lua.global('g')?.boolean).toBe(false)
+
+    expect(lua.global('h')?.number).toBe(42)
+    expect(lua.global('x')?.number).toBe(1)
+})
+
 test('Can create and call function', () =>
 {
     const lua = new Engine(`

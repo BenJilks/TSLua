@@ -9,6 +9,7 @@ export enum State {
     NumberLiteralDot,
     NumberLiteralExpSign,
     NumberLiteralExp,
+    NumberHex,
     Comment,
 }
 
@@ -473,6 +474,25 @@ export class TokenStream
             return
         }
 
+        if (c == 'x')
+        {
+            if (this.buffer != '0')
+            {
+                this.peek_queue.push({
+                    data: this.buffer,
+                    kind: TokenKind.NumberLiteral,
+                    debug: this.token_start_debug,
+                })
+                this.state = State.Initial
+                return
+            }
+
+            this.buffer += c
+            this.state = State.NumberHex
+            this.consume()
+            return
+        }
+
         this.peek_queue.push({
             data: this.buffer,
             kind: TokenKind.NumberLiteral,
@@ -494,7 +514,7 @@ export class TokenStream
         if (c == 'e' || c == 'E')
         {
             this.buffer += c
-            this.state = State.NumberLiteralExp
+            this.state = State.NumberLiteralExpSign
             this.consume()
             return
         }
@@ -538,6 +558,24 @@ export class TokenStream
         
         this.peek_queue.push({
             data: this.buffer,
+            kind: TokenKind.NumberLiteral,
+            debug: this.token_start_debug,
+        })
+        this.state = State.Initial
+    }
+
+    private number_hex()
+    {
+        const c = this.current() ?? '\0'
+        if (/[0-9a-fA-F]/.test(c))
+        {
+            this.buffer += c
+            this.consume()
+            return
+        }
+        
+        this.peek_queue.push({
+            data: parseInt(this.buffer.slice(2), 16).toString(),
             kind: TokenKind.NumberLiteral,
             debug: this.token_start_debug,
         })
@@ -600,6 +638,9 @@ export class TokenStream
             case State.NumberLiteralExp:
 			    this.number_exp()
 			    break
+            case State.NumberHex:
+			    this.number_hex()
+                break
             case State.Comment:
 			    this.comment()
 			    break
