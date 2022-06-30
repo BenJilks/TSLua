@@ -287,9 +287,9 @@ function optimize_repeat(repeat_block: Repeat | undefined, constants: Map<string
     optimize_chunk(repeat_block.body, constants)
 }
 
-export function optimize_chunk(chunk: Chunk, constants?: Map<string, Value>)
+export function optimize_chunk(chunk: Chunk, parent_constants?: Map<string, Value>)
 {
-    constants = constants ?? new Map()
+    const constants = new Map(parent_constants)
     for (const statement of chunk.statements)
     {
         switch (statement.kind)
@@ -335,6 +335,15 @@ export function optimize_chunk(chunk: Chunk, constants?: Map<string, Value>)
             case StatementKind.Local:
             case StatementKind.Break:
                 break
+        }
+    }
+
+    if (parent_constants != undefined)
+    {
+        for (const name of [...parent_constants.keys()])
+        {
+            if (!constants.has(name))
+                parent_constants.delete(name)
         }
     }
 

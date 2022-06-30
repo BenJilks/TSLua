@@ -49,3 +49,19 @@ test('Constant locals', () =>
     expect(c?.number).toEqual(3)
 })
 
+test('Constant locals don\'t leak out of blocks', () =>
+{
+    const lua = new Engine(`
+        function foo()
+            local a = 1
+        end
+
+        c = a
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    const c = lua.global('c')
+    expect(c).toBeDefined()
+    expect(c?.data_type).toBe(DataType.Nil)
+})
+
