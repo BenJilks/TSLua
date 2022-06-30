@@ -3,6 +3,7 @@ import { DataType, NativeFunction, Variable, nil, make_number, make_boolean, mak
 import { TokenStream } from './lexer'
 import { parse } from './parser'
 import { compile } from './compiler'
+import { optimize_chunk } from './optimizer'
 import * as std from './lib'
 
 function index(val: Variable | undefined): string | number | undefined
@@ -117,6 +118,7 @@ export class Engine
         if (ast instanceof Error)
             return ast
 
+        optimize_chunk(ast)
         const program = compile(ast, this.program)
         this.program = program.code
         this.ip = program.start

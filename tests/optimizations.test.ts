@@ -29,3 +29,23 @@ test('Short circuiting', () =>
     expect(i?.number).toEqual(2 + 3 + 1)
 })
 
+test('Constant locals', () =>
+{
+    const lua = new Engine(`
+        local a = 1
+
+        function foo()
+            a = 2
+        end
+
+        foo()
+        c = a + 1
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    const c = lua.global('c')
+    expect(c).toBeDefined()
+    expect(c?.data_type).toBe(DataType.Number)
+    expect(c?.number).toEqual(3)
+})
+
