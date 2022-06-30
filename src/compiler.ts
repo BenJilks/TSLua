@@ -1,4 +1,7 @@
-import { StatementKind, Assignment, IfBlock, While, ExpressionKind, Expression, Chunk, For, Return, Local, NumericFor, Repeat, Do } from './ast'
+import { StatementKind, Chunk } from './ast'
+import { Expression, ExpressionKind } from './ast'
+import { IfBlock, While, For, NumericFor, Repeat, Do } from './ast'
+import { Assignment, Local, Return } from './ast'
 import { Value, ValueKind } from './ast'
 import { Op, OpCode, Program } from './opcode'
 import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
@@ -280,6 +283,90 @@ function compile_local(local: Local | undefined): Op[]
         }))
 }
 
+function compile_inverted_conditional_jump(condition: Expression | undefined, jump_by: number, functions: Op[][]): Op[]
+{
+    if (condition == undefined)
+        throw new Error()
+
+    const ops: Op[] = []
+    const debug = condition.token.debug
+    switch (condition.kind)
+    {
+        case ExpressionKind.And:
+        {
+            const rhs = compile_inverted_conditional_jump(condition.rhs, jump_by, functions)
+            ops.push(...compile_conditional_jump(condition.lhs, rhs.length, functions))
+            ops.push(...rhs)
+            break
+        }
+
+        case ExpressionKind.Or:
+        {
+            const rhs = compile_inverted_conditional_jump(condition.rhs, jump_by, functions)
+            ops.push(...compile_inverted_conditional_jump(condition.lhs, rhs.length + jump_by, functions))
+            ops.push(...rhs)
+            break
+        }
+
+        case ExpressionKind.Not:
+        {
+            ops.push(...compile_expression(condition.expression, functions))
+            break
+        }
+
+        default:
+        {
+            ops.push(...compile_expression(condition, functions))
+            ops.push({ code: OpCode.JumpIf, arg: make_number(jump_by), debug: debug })
+            break
+        }
+    }
+
+    return ops
+}
+
+function compile_conditional_jump(condition: Expression | undefined, jump_by: number, functions: Op[][]): Op[]
+{
+    if (condition == undefined)
+        throw new Error()
+
+    const ops: Op[] = []
+    const debug = condition.token.debug
+    switch (condition.kind)
+    {
+        case ExpressionKind.And:
+        {
+            const rhs = compile_conditional_jump(condition.rhs, jump_by, functions)
+            ops.push(...compile_conditional_jump(condition.lhs, rhs.length + jump_by, functions))
+            ops.push(...rhs)
+            break
+        }
+
+        case ExpressionKind.Or:
+        {
+            const rhs = compile_conditional_jump(condition.rhs, jump_by, functions)
+            ops.push(...compile_inverted_conditional_jump(condition.lhs, rhs.length, functions))
+            ops.push(...rhs)
+            break
+        }
+
+        case ExpressionKind.Not:
+        {
+            ops.push(...compile_inverted_conditional_jump(condition.expression, jump_by, functions))
+            break
+        }
+
+        default:
+        {
+            ops.push(...compile_expression(condition, functions))
+            ops.push({ code: OpCode.JumpIfNot, arg: make_number(jump_by), debug: debug })
+            break
+        }
+    }
+
+    return ops
+}
+
 function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
 {
     if (if_block == undefined)
@@ -294,8 +381,7 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     {
         const ops: Op[] = []
         const if_else_body = compile_block(body, functions)
-        ops.push(...compile_expression(condition, functions))
-        ops.push({ code: OpCode.JumpIfNot, arg: make_number(if_else_body.length + 1), debug: token.debug })
+        ops.push(...compile_conditional_jump(condition, if_else_body.length + 1, functions))
         ops.push(...if_else_body)
 
         const offset = if_else_chunks.reduce((acc, chunk) => chunk.length + acc, 0) + else_chunk.length
@@ -307,8 +393,7 @@ function compile_if(if_block: IfBlock | undefined, functions: Op[][]): Op[]
     const ops: Op[] = []
     const body = compile_block(if_block.body, functions)
     ops.push({ code: OpCode.StartBlock, debug: debug })
-    ops.push(...compile_expression(if_block.condition, functions))
-    ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + 1), debug: debug })
+    ops.push(...compile_conditional_jump(if_block.condition, body.length + 1, functions))
     ops.push(...body)
 
     const offset = if_else_chunks.reduce((acc, chunk) => chunk.length + acc, 0) + else_chunk.length
@@ -345,8 +430,7 @@ function compile_while(while_block: While | undefined, functions: Op[][]): Op[]
     replace_breaks(body, 1)
 
     ops.push({ code: OpCode.StartBlock, debug: debug })
-    ops.push(...compile_expression(while_block.condition, functions))
-    ops.push({ code: OpCode.JumpIfNot, arg: make_number(body.length + 1), debug: debug })
+    ops.push(...compile_conditional_jump(while_block.condition, body.length + 1, functions))
     ops.push(...body)
     ops.push({ code: OpCode.Jump, arg: make_number(-ops.length - 1), debug: debug })
     ops.push({ code: OpCode.EndBlock, debug: debug })
@@ -440,8 +524,8 @@ function compile_repeat(repeat: Repeat | undefined, functions: Op[][]): Op[]
     ops.push({ code: OpCode.StartBlock, debug: debug })
 
     ops.push(...compile_block(repeat.body, functions))
-    ops.push(...compile_expression(repeat.condition, functions))
-    ops.push({ code: OpCode.JumpIfNot, arg: make_number(-ops.length), debug: debug })
+    ops.push(...compile_inverted_conditional_jump(repeat.condition, 1, functions))
+    ops.push({ code: OpCode.Jump, arg: make_number(-ops.length), debug: debug })
 
     ops.push({ code: OpCode.EndBlock, debug: debug })
     return ops

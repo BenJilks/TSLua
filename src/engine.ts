@@ -377,6 +377,7 @@ export class Engine
             case OpCode.IsNotNil: this.stack.push(make_boolean((this.stack.pop() ?? nil) != nil)); break
             case OpCode.Jump: this.ip += arg?.number ?? 0; break
             case OpCode.JumpIfNot: if (!is_true(this.stack.pop())) { this.ip += arg?.number ?? 0 } break
+            case OpCode.JumpIf: if (is_true(this.stack.pop())) { this.ip += arg?.number ?? 0 } break
             case OpCode.MakeLocal: this.locals_stack.at(-1)?.set(arg?.string ?? '', nil); break
             case OpCode.NewTable: this.stack.push({ data_type: DataType.Table, table: new Map() }); break
             case OpCode.StartBlock: this.locals_stack.push(new Map()); break
