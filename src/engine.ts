@@ -179,7 +179,7 @@ export class Engine
     call(func: Variable, ...args: Variable[]): Variable[] | Error
     {
         if (func.native_function != undefined)
-            return func.native_function(this, ...args)
+            return this.call_native_function(func.native_function, ...args)
 
         if (func.function_id == undefined)
             return new Error() // TODO: Error message
@@ -233,6 +233,25 @@ export class Engine
         return this.stack[0] ?? nil
     }
 
+    raise_error(message: string)
+    {
+        const op = this.program.at(this.ip - 1)
+        this.error = this.runtime_error(op, message)
+    }
+
+    private call_native_function(native_function: NativeFunction, ...args: Variable[]): Variable[] | Error
+    {
+        const results = native_function(this, ...args)
+        if (this.error != undefined)
+        {
+            const error = this.error
+            this.error = undefined
+            return error
+        }
+
+        return results
+    }
+
     private operation(op: (x: number, y: number) => number)
     {
         const x = this.stack.pop()?.number ?? 0
@@ -255,9 +274,12 @@ export class Engine
             this.stack.pop()
     }
 
-    private runtime_error(op: Op, message: string): Error
+    private runtime_error(op: Op | undefined, message: string): Error
     {
-        return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
+        if (op == undefined)
+            return new Error(`${ message }`)
+        else
+            return new Error(`${ op.debug.line }:${ op.debug.column }: ${ message }`)
     }
 
     private run_instruction(op: Op): undefined | Error
@@ -300,7 +322,10 @@ export class Engine
                 const iter = this.stack[this.stack.length - 3]
                 if (iter.native_function != undefined)
                 {
-                    this.stack.push(...iter.native_function(this, control, state))
+                    const result = this.call_native_function(iter.native_function, control, state)
+                    if (result instanceof Error)
+                        return result
+                    this.stack.push(...result)
                     break
                 }
 
@@ -497,7 +522,19 @@ export class Engine
                     {
                         const args = this.stack.splice(this.stack.length - count, count)
                         if (func_var.native_function != undefined)
-                            this.stack.push(...func_var.native_function(this, ...args))
+                        {
+                            const result = this.call_native_function(func_var.native_function, ...args)
+                            if (result instanceof Error)
+                                return result
+                            this.stack.push(...result)
+                        }
+
+                        if (this.error != undefined)
+                        {
+                            const error = this.error
+                            this.error = undefined
+                            return error
+                        }
                         break
                     }
 

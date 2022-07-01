@@ -248,6 +248,57 @@ function to_string(_: Engine, arg: Variable): Variable[]
     return [make_string(variable_to_string(arg))]
 }
 
+function assert(engine: Engine, condition: Variable, message?: Variable): Variable[]
+{
+    if (!(condition.boolean ?? false))
+        engine.raise_error(message?.string ?? 'assertion failed!')
+
+    return [nil]
+}
+
+function error(engine: Engine, message: Variable): Variable[]
+{
+    engine.raise_error(message?.string ?? '')
+    return [nil]
+}
+
+let warnings_on = true
+function warn(_: Engine, ...messages: Variable[]): Variable[]
+{
+    if (messages.length == 1)
+    {
+        switch (messages[0].string)
+        {
+            case '@on':
+                warnings_on = true
+                break
+            case '@off':
+                warnings_on = false
+                break
+        }
+    }
+
+    if (warnings_on)
+        console.error('WARNING', messages.map(x => variable_to_string(x)))
+    return [nil]
+}
+
+function select(_: Engine, index: Variable, ...args: Variable[]): Variable[]
+{
+    if (index.number != undefined)
+    {
+        if (index.number > 0)
+            return args.slice(index.number - 1)
+        else
+            return args.slice(args.length + index.number - 1)
+    }
+
+    if (index.string == '#')
+        return [make_number(args.length)]
+
+    return [nil]
+}
+
 function string_byte(_: Engine, s: Variable, i?: Variable, j?: Variable): Variable[]
 {
     if (s.string == undefined)
@@ -660,6 +711,10 @@ export function std_lib(): Map<string, Variable>
         ['values', { data_type: DataType.NativeFunction, native_function: values }],
         ['tonumber', { data_type: DataType.NativeFunction, native_function: to_number }],
         ['tostring', { data_type: DataType.NativeFunction, native_function: to_string }],
+        ['assert', { data_type: DataType.NativeFunction, native_function: assert }],
+        ['error', { data_type: DataType.NativeFunction, native_function: error }],
+        ['warn', { data_type: DataType.NativeFunction, native_function: warn }],
+        ['select', { data_type: DataType.NativeFunction, native_function: select }],
         ['string', { data_type: DataType.Table, table: new Map([
             ['byte', { data_type: DataType.NativeFunction, native_function: string_byte }],
             ['char', { data_type: DataType.NativeFunction, native_function: string_char }],

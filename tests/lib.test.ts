@@ -228,3 +228,39 @@ test('Itorator functions', () =>
     expect(ipair_output?.string).toBe('1=a,2=b,3=c,')
 })
 
+test('Error functions', () =>
+{
+    {
+        const lua = new Engine(`
+            assert(true, "This should be fine")
+            assert(false, "Nope")
+        `)
+        expect(lua.run()).toEqual(new Error('3:13: Nope'))
+    }
+
+    {
+        const lua = new Engine(`
+            error "This is an error"
+        `)
+        expect(lua.run()).toEqual(new Error('2:13: This is an error'))
+    }
+})
+
+test('Select function', () =>
+{
+    const lua = new Engine(`
+        a, b = select(2, 1, 2, 3)
+        c, d = select(-1, 1, 2, 3)
+        e = select("#", 1, 2, 3)
+    `)
+    expect(lua.run()).not.toBeInstanceOf(Error)
+
+    expect(lua.global('a')?.number).toBe(2)
+    expect(lua.global('b')?.number).toBe(3)
+
+    expect(lua.global('c')?.number).toBe(2)
+    expect(lua.global('d')?.number).toBe(3)
+
+    expect(lua.global('e')?.number).toBe(3)
+})
+
