@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2022, Ben Jilks <benjyjilks@gmail.com>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 import { Engine } from './src/engine'
 import { DataType, nil } from './src/runtime'
 import { make_boolean, make_number, make_string } from './src/runtime'

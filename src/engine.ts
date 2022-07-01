@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2022, Ben Jilks <benjyjilks@gmail.com>
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 import { Op, OpCode, op_code_name } from './opcode'
 import { DataType, NativeFunction, Variable, nil, make_number, make_boolean, make_string } from './runtime'
 import { TokenStream } from './lexer'
