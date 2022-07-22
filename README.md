@@ -3,7 +3,7 @@
 
 A pure TypeScript reimplementation of the Lua programming language.
 
-This implementation is designed to be as close as possible to the original C implementation, while providing seamless TypeScript/JavaScript interoperability. All 'native' functions are implemented in TypeScript and objects are represented using standard JavaScript object. Meaning garbage collection is left as the responsibility of the JavaScript engine.
+This implementation is designed to be as close as possible to the original C implementation, while providing seamless TypeScript/JavaScript interoperability. All 'native' functions are implemented in TypeScript and objects are represented using standard JavaScript objects. Meaning garbage collection is left as the responsibility of the JavaScript engine.
 
 To create a Lua runtime environment, simply instantiate the `Engine` object within the `lua` module. It's constructor accepts a Lua script, that can be executed with the `run` method. Additional code can be loaded using the `load` method.
 
