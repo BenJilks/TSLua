@@ -216,7 +216,7 @@ export class Engine
         return return_values
     }
 
-    run(options?: LuaOptions): Variable | Error
+    run_for_steps(steps: number, options?: LuaOptions): Variable | Error | undefined
     {
         if (this.error != undefined)
             return this.error
@@ -232,11 +232,20 @@ export class Engine
                 return result
 
             step_count += 1
-            if (step_count > 1000)
-                return new Error('Program ran for too long')
+            if (step_count >= steps)
+                return undefined
         }
 
         return this.stack[0] ?? nil
+    }
+
+    run(options?: LuaOptions): Variable | Error
+    {
+        const result = this.run_for_steps(1000, options)
+        if (result == undefined)
+            return new Error('Program ran for too long')
+        else
+            return result
     }
 
     raise_error(message: string)
