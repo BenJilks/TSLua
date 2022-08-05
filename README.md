@@ -17,6 +17,11 @@ Global state is maintained for the whole lifetime of the `Engine` object. Lua va
     console.log(a) // --> 3
 ```
 
+# Demo
+
+A small repl demo is provided here:
+https://tslua-demo.glitch.me/
+
 # Lua Reference Manual
 
 Below is the full Lua reference manual, adapted to reflect the changes make in this implementation. It's mostly the same but with the C specific details and functions removed.
