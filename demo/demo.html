@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>TSLua Demo</title>
+        <script src="demo.js" defer></script>
+        <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            padding: 1em;
+        }
+        
+        textarea {
+            width: 100%;
+            resize: vertical;
+            font-size: 1.5em;
+        }
+
+        .error {
+            color: red;
+        }
+
+        </style>
+    </head>
+
+    <body>
+        <h1>TSLua Demo</h1>
+        <textarea id="input" rows="9">
+function fib(i)
+    if i <= 2
+        then return 1
+        else return fib(i - 1) + fib(i - 2)
+    end
+end
+
+x = fib(10)
+x</textarea>
+        <p id="output"></p>
+        <button id="run">Run</button>
+        <button id="bytecode">Bytecode</button>
+        <noscript>
+            <p class="error">JavaScript is needed to run this demo.</p>
+        </noscript>
+    </body>
+</html>
+
