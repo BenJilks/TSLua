@@ -180,8 +180,8 @@ const single_token_map: Map<string, TokenKind> = new Map([
 
 const double_token_map: Map<string, TokenKind> = new Map([
     ['==', TokenKind.Equals],
-    ['>=', TokenKind.LessThenEquals],
-    ['<=', TokenKind.GreaterThenEquals],
+    ['<=', TokenKind.LessThenEquals],
+    ['>=', TokenKind.GreaterThenEquals],
     ['~=', TokenKind.NotEquals],
     ['..', TokenKind.Concat],
     ['//', TokenKind.FloorDivision],
