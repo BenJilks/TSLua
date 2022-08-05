@@ -131,22 +131,22 @@ export class Engine
         this.start_ip = program.start
     }
 
-    dump_bytecode()
+    bytecode(): string[]
     {
         if (this.error != undefined)
-        {
-            console.log(this.error)
-            return
-        }
+            return [ this.error.message ]
 
+        const output = []
         for (const [i, op] of this.program.entries())
         {
             const arg = op.arg != undefined ? std.variable_to_string(op.arg) : ''
             if (i == this.ip)
-                console.log('*', i, op_code_name(op.code), arg)
+                output.push(`* ${ i } ${ op_code_name(op.code) } ${ arg }`)
             else
-                console.log(i, op_code_name(op.code), arg)
+                output.push(`${ i } ${ op_code_name(op.code) } ${ arg }`)
         }
+
+        return output
     }
 
     global(name: string): Variable | undefined
