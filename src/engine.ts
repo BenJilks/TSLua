@@ -438,7 +438,7 @@ export class Engine
             case OpCode.Return:
             {
                 this.ip = this.call_stack.pop() ?? this.program.length
-                this.locals_stack.pop()
+                this.locals_stack = this.locals_stack.slice(0, this.call_stack.pop())
                 this.locals_capture = []
                 break
             }
@@ -556,7 +556,7 @@ export class Engine
                     case DataType.Function:
                     {
                         this.stack.push(make_number(count))
-                        this.call_stack.push(this.ip)
+                        this.call_stack.push(this.locals_stack.length, this.ip)
                         this.locals_stack.push(new Map())
                         this.locals_capture = func_var.locals ?? []
                         this.ip = func_var.function_id ?? this.ip
