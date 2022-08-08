@@ -46,6 +46,6 @@ test('Matching end tokens', () =>
         foo()
     `)
     
-    expect(lua.run()).toEqual(new Error('7:5: Missing \'end\''))
+    expect(lua.run()).toEqual(new Error('7:5: Missing \'end\', got \'EOF\' instead'))
 })
 
