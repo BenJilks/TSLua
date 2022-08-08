@@ -32,6 +32,50 @@ function create_next_input(input: HTMLTextAreaElement, output: HTMLElement)
     output.after(new_input, new_output)
 }
 
+function is_table_numeric(table: Map<string|number, Variable>): boolean
+{
+    for (const [index, key] of [...table.keys()].entries())
+    {
+        if (typeof key === 'string')
+            return false
+        if (index + 1 !== key)
+            return false
+    }
+
+    return true
+}
+
+function print(...args: Variable[]): string
+{
+    if (args.length == 1 && args[0].table != undefined)
+    {
+        const is_numeric = is_table_numeric(args[0].table)
+        if (is_numeric)
+        {
+            return `<text>[ ${
+                [...args[0].table.values()].map(x => print(x)).join(', ')
+            } ]</text>`
+        }
+
+        return `
+            <table>
+                <tr>
+                     <th>Field</th>
+                     <th>Value</th>
+                </tr>
+                ${ [...args[0].table.entries()].map(([field, value]) => `
+                    <tr>
+                        <td>${ field }</td>
+                        <td>${ print(value) }</td>
+                    </tr>
+                `).join('') }
+            </table>
+        `
+    }
+
+    return `<text>${ args.map(x => to_string(x)).join(' ') }</text>`
+}
+
 async function run(engine: Engine)
 {
     const input = <HTMLTextAreaElement> document.getElementById('input')!
@@ -47,9 +91,8 @@ async function run(engine: Engine)
 
     engine.define('print', (_: Engine, ...args: Variable[]) =>
     {
-        output.innerHTML +=
-            `<text>${ args.map(x => to_string(x)).join(' ') }</text><br>`
-        return [nil]
+        output.innerHTML += print(...args) + '<br>'
+        return [ nil ]
     })
 
     const runtime_result = await run_program(engine)
@@ -59,7 +102,7 @@ async function run(engine: Engine)
         return
     }
 
-    output.innerHTML += `<text>Result: ${ to_string(runtime_result) }</text><br>`
+    output.innerHTML += print(runtime_result) + '<br>'
     create_next_input(input, output)
 }
 
