@@ -900,6 +900,7 @@ function parse_statement(stream: TokenStream, end_tokens: TokenKind[]): Statemen
         case TokenKind.StringLiteral:
         case TokenKind.NumberLiteral:
         case TokenKind.BooleanLiteral:
+        case TokenKind.SquiglyOpen:
         case TokenKind.Local:
             return parse_assign_or_expression(stream)
         case TokenKind.Return:
@@ -924,7 +925,8 @@ function parse_statement(stream: TokenStream, end_tokens: TokenKind[]): Statemen
         default:
             if (end_tokens.includes(token.kind))
                 return undefined
-            return error(token, `Missing '${ token_kind_to_string(end_tokens[0]) }'`)
+            return error(token, `Missing '${ token_kind_to_string(end_tokens[0]) }', ` +
+                                `got '${ token_kind_to_string(token.kind) }' instead`)
     }
 }
 
