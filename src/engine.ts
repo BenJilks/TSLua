@@ -10,6 +10,7 @@ import { TokenStream } from './lexer'
 import { parse } from './parser'
 import { compile } from './compiler'
 import { optimize_chunk } from './optimizer'
+import { read_bin } from './bin'
 import * as std from './lib'
 
 function index(val: Variable | undefined): string | number | undefined
@@ -129,6 +130,11 @@ export class Engine
         this.program = program.code
         this.ip = program.start
         this.start_ip = program.start
+    }
+
+    load_bin(bytes: Buffer)
+    {
+        read_bin(bytes)
     }
 
     bytecode(): string[]

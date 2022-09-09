@@ -143,6 +143,7 @@ async function run_repl(bytecode: boolean, trace: boolean)
 async function main()
 {
     let script: string | undefined = undefined
+    let bin: string | undefined = undefined
     let trace = false
     let bytecode = false
 
@@ -155,6 +156,7 @@ async function main()
             switch (long)
             {
                 case 'script': script = process.argv.at(++i); break
+                case 'bin': bin = process.argv.at(++i); break
                 case 'trace': trace = true; break
                 case 'bytecode': bytecode = true; break
             }
@@ -166,6 +168,7 @@ async function main()
                 switch (short)
                 {
                     case 's': script = process.argv.at(++i); break
+                    case 'c': bin = process.argv.at(++i); break
                     case 't': trace = true; break
                     case 'b': bytecode = true; break
                 }
@@ -173,12 +176,21 @@ async function main()
         }
     }
 
-    if (script != undefined)
+    if (bin !== undefined || script !== undefined)
     {
-        console.log(`Running script '${ script }'`)
+        const engine = new lua.Engine()
 
-        const source = await fs.readFile(script)
-        const engine = new lua.Engine(source.toString('utf8'))
+        if (bin !== undefined)
+        {
+            console.log(`Running binary '${ bin }'`)
+            engine.load_bin(await fs.readFile(bin))
+        }
+        else if (script !== undefined)
+        {
+            console.log(`Running script '${ script }'`)
+            engine.load((await fs.readFile(script)).toString('utf8'))
+        }
+
         if (bytecode)
         {
             for (const bytecode of engine.bytecode())
