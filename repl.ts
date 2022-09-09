@@ -121,7 +121,8 @@ async function run_repl(bytecode: boolean, trace: boolean)
 
         if (bytecode)
         {
-            engine.dump_bytecode()
+            for (const bytecode of engine.bytecode())
+                console.log(bytecode)
             continue
         }
 
@@ -180,7 +181,8 @@ async function main()
         const engine = new lua.Engine(source.toString('utf8'))
         if (bytecode)
         {
-            engine.dump_bytecode()
+            for (const bytecode of engine.bytecode())
+                console.log(bytecode)
             process.exit(0)
         }
 
