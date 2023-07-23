@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { Token } from './lexer'
+import type { Token } from './lexer'
 
 export enum ValueKind {
     NilLiteral,

@@ -4,11 +4,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { Chunk, IfElseBlock } from './ast'
-import { Expression, ExpressionKind } from './ast'
-import { Statement, StatementKind } from './ast'
-import { Value, ValueKind } from './ast'
-import { Token, TokenKind, TokenStream, token_kind_to_string } from './lexer'
+import type { Chunk, IfElseBlock } from './ast'
+import type { Expression, Statement, Value } from './ast'
+import type { Token } from './lexer'
+
+import { ExpressionKind, StatementKind, ValueKind } from './ast'
+import { TokenKind, TokenStream, token_kind_to_string } from './lexer'
 
 const UNARY = [
     TokenKind.Not,

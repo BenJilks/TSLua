@@ -4,14 +4,16 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { StatementKind, Chunk } from './ast'
-import { Expression, ExpressionKind } from './ast'
-import { IfBlock, While, For, NumericFor, Repeat, Do } from './ast'
-import { Assignment, Local, Return } from './ast'
-import { Value, ValueKind } from './ast'
-import { Op, OpCode, Program } from './opcode'
-import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
-import { Token } from './lexer'
+import type { Chunk, Expression, Value } from './ast'
+import type { IfBlock, While, For, NumericFor, Repeat, Do } from './ast'
+import type { Op, Program } from './opcode'
+import type { Token } from './lexer'
+import type { Assignment, Local, Return } from './ast'
+
+import { StatementKind, ExpressionKind, ValueKind  } from './ast'
+import { OpCode } from './opcode'
+import { DataType } from './runtime'
+import { make_boolean, make_number, make_string, nil } from './runtime'
 
 function compile_function(chunk: Chunk, token: Token, parameters: Token[], functions: Op[][]): number
 {

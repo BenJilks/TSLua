@@ -4,8 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+import type { Variable } from './runtime'
 import { Engine } from './engine'
-import { DataType, make_boolean, make_number, make_string, nil, Variable } from './runtime'
+import { DataType, make_boolean, make_number, make_string, nil } from './runtime'
 
 let rand = xoroshiro([0, 0, 0, 0].map(_ => BigInt(Math.floor(Math.random() * 100))))
 

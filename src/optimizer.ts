@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { StatementKind, Chunk } from './ast'
-import { Expression, ExpressionKind } from './ast'
-import { IfBlock, While, For, NumericFor, Repeat } from './ast'
-import { Assignment, Value, ValueKind } from './ast'
+import type { Chunk, Expression } from './ast'
+import type { IfBlock, While, For, NumericFor, Repeat } from './ast'
+import type { Assignment, Value } from './ast'
+import { StatementKind, ExpressionKind, ValueKind } from './ast'
 
 const CONSTANT_VALUES = [
     ValueKind.NilLiteral,

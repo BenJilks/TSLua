@@ -218,15 +218,16 @@ const keyword_map: Map<string, TokenKind> = new Map([
 export class TokenStream
 {
 
+    private readonly processing_stream: string[]
+    private readonly peek_queue: Token[]
+
     private state: State
-    private processing_stream: string[]
-    private end_of_stream: boolean
+    private end_of_stream: boolean = false
     private buffer: string
     private token_start_debug: Debug
 
     private line: number
     private column: number
-    private peek_queue: Token[]
 
     constructor() 
     {
@@ -405,7 +406,6 @@ export class TokenStream
             case '0': this.buffer += '\0'; break
             case 'r': this.buffer += '\r'; break
             case 't': this.buffer += '\t'; break
-            case 'e': this.buffer += '\e'; break
             default:
                 this.buffer += c
                 break
@@ -535,7 +535,7 @@ export class TokenStream
     private number_exp_sign()
     {
         const c = this.current() ?? '\0'
-        if (/[0-9+\-]/.test(c))
+        if (/[0-9+-]/.test(c))
         {
             this.buffer += c
             this.consume()
@@ -632,23 +632,23 @@ export class TokenStream
                 this.read_multi_line_string()
                 break
             case State.NumberLiteral:
-			    this.number()
-			    break
+                this.number()
+                break
             case State.NumberLiteralDot:
-			    this.number_dot()
-			    break
+                this.number_dot()
+                break
             case State.NumberLiteralExpSign:
-			    this.number_exp_sign()
-			    break
+                this.number_exp_sign()
+                break
             case State.NumberLiteralExp:
-			    this.number_exp()
-			    break
+                this.number_exp()
+                break
             case State.NumberHex:
-			    this.number_hex()
+                this.number_hex()
                 break
             case State.Comment:
-			    this.comment()
-			    break
+                this.comment()
+                break
         }
     }
 

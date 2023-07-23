@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { Variable } from './runtime'
-import { Debug } from './lexer'
+import type { Variable } from './runtime'
+import type { Debug } from './lexer'
 
 export enum OpCode {
     Load,

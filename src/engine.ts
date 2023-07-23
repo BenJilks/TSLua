@@ -4,8 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-import { Op, OpCode, op_code_name } from './opcode'
-import { DataType, NativeFunction, Variable, nil, make_number, make_boolean, make_string } from './runtime'
+import type { Op } from './opcode'
+import type { NativeFunction, Variable } from './runtime'
+
+import { OpCode, op_code_name } from './opcode'
+import { DataType, nil, make_number, make_boolean, make_string } from './runtime'
 import { TokenStream } from './lexer'
 import { parse } from './parser'
 import { compile } from './compiler'
@@ -88,14 +91,14 @@ export class Engine
 
     private program: Op[]
     private globals: Map<string, Variable>
-    private start_ip: number
+    private start_ip: number = 0
 
-    private ip: number
-    private stack: Variable[]
-    private locals_stack: Map<string, Variable>[]
-    private locals_capture: Map<string, Variable>[]
-    private call_stack: number[]
-    private assign_height_stack: number[]
+    private ip: number = 0
+    private stack: Variable[] = []
+    private locals_stack: Map<string, Variable>[] = []
+    private locals_capture: Map<string, Variable>[] = []
+    private call_stack: number[] = []
+    private assign_height_stack: number[] = []
 
     private error: Error | undefined
 
